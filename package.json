@@ -1,0 +1,17 @@
+{
+  "name": "london-trip-planner",
+  "version": "1.0.0",
+  "description": "Collaborative trip planner for London",
+  "scripts": {
+    "start": "npx http-server public -o -c-1",
+    "deploy": "firebase deploy"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/cli": "^8.0.0",
+    "@capacitor/core": "^8.0.0"
+  }
+}

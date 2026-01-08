@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">london-trip-planner</string>
+    <string name="title_activity_main">london-trip-planner</string>
+    <string name="package_name">io.londontrip.starter</string>
+    <string name="custom_url_scheme">io.londontrip.starter</string>
+</resources>
