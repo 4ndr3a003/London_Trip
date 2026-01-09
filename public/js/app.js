@@ -613,23 +613,43 @@ const App = () => {
     const handleAddBackpackItem = async () => {
         if (!newItemBackpack.item) return;
 
-        await db.collection("backpack").add({
+        const backpackData = {
             ...newItemBackpack,
             qty: Number(newItemBackpack.qty) || 1,
             ml: newItemBackpack.categoria === 'Liquido' ? (Number(newItemBackpack.ml) || 0) : 0,
             outside: newItemBackpack.outside || false,
             owner: newItemBackpack.owner,
             collocazione: newItemBackpack.collocazione || "",
-            packed: false
-        });
+        };
 
-        setNewItemBackpack({ item: "", categoria: newItemBackpack.categoria, packed: false, qty: 1, outside: false, ml: "", owner: backpackOwnerFilter, collocazione: "" }); // Keep last category & current filter owner
-        // Don't close modal to allow rapid entry if desired, or maybe we do? Let's keep it open for now or add a "Salva e aggiungi altro" button? 
-        // For simplicity, let's behave like others or just clear input.
-        // If we want to strictly follow others pattern, we might want to close. 
-        // But for a list, adding multiple things is common. 
-        // Let's NOT close the modal, just clear the name.
-        document.getElementById('backpack-input')?.focus();
+        if (editingId) {
+            // Update existing
+            setBackpack(prev => prev.map(i => i.id === editingId ? { ...i, ...backpackData } : i));
+            await db.collection("backpack").doc(editingId).update(backpackData);
+        } else {
+            // Create new
+            await db.collection("backpack").add({
+                ...backpackData,
+                packed: false
+            });
+        }
+
+        setEditingId(null);
+        setNewItemBackpack({ item: "", categoria: newItemBackpack.categoria, packed: false, qty: 1, outside: false, ml: "", owner: backpackOwnerFilter, collocazione: "" });
+
+        // If we were editing, close the modal. If adding, keep open for rapid entry? 
+        // Let's close it if editing to feel natural, keep open if adding? 
+        // Actually, if editing, we definitely want to close.
+        if (editingId) setActiveModal(null);
+
+        // Focus if kept open
+        if (!editingId) document.getElementById('backpack-input')?.focus();
+    };
+
+    const openEditBackpackItem = (item) => {
+        setNewItemBackpack(item);
+        setEditingId(item.id);
+        setActiveModal('backpack');
     };
 
     const handleDeleteBackpackItem = async (id) => {
@@ -1189,15 +1209,22 @@ const App = () => {
                             <div className="flex flex-col gap-2">
                                 <div className="flex gap-2 text-sm">
                                     <div className="flex-1 flex bg-gray-50 p-1 rounded-lg">
-                                        {["Andrea Inardi", "Elena Cafasso"].map(owner => (
-                                            <button
-                                                key={owner}
-                                                onClick={() => { setBackpackOwnerFilter(owner); setBackpackFilterPlacement("Tutti"); }}
-                                                className={`flex-1 py-1.5 rounded-md font-bold transition-all flex items-center justify-center gap-1 text-xs ${backpackOwnerFilter === owner ? 'bg-white text-black shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
-                                            >
-                                                <User size={12} /> {owner.split(' ')[0]}
-                                            </button>
-                                        ))}
+                                        {["Andrea Inardi", "Elena Cafasso"].map(owner => {
+                                            const ownerItems = backpack.filter(i => i.owner === owner);
+                                            const isOwnerComplete = ownerItems.length > 0 && ownerItems.every(i => i.packed);
+
+                                            return (
+                                                <button
+                                                    key={owner}
+                                                    onClick={() => { setBackpackOwnerFilter(owner); setBackpackFilterPlacement("Tutti"); }}
+                                                    className={`flex-1 py-1.5 rounded-md font-bold transition-all flex items-center justify-center gap-1 text-xs ${backpackOwnerFilter === owner ? 'bg-white text-black shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                                                >
+                                                    <User size={12} />
+                                                    {owner.split(' ')[0]}
+                                                    {isOwnerComplete && <CheckCircle size={12} className="text-green-500 ml-1" />}
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                     <div className="flex-[0.8] flex bg-gray-50 p-1 rounded-lg">
                                         {["Tutti", "Dentro", "Fuori"].map(loc => (
@@ -1237,41 +1264,65 @@ const App = () => {
 
                             {/* Row 3: Compact Stats */}
                             <div className="pt-2 border-t border-gray-50">
-                                <div className="flex justify-between items-end mb-1.5">
-                                    <div className="flex items-center gap-2">
-                                        <Backpack size={18} className="text-gray-300" />
-                                        <div className="text-xs font-bold text-gray-500 uppercase tracking-wide">
-                                            {backpack.filter(i => i.owner === backpackOwnerFilter && i.packed).length}/{backpack.filter(i => i.owner === backpackOwnerFilter).length} OGGETTI
-                                        </div>
-                                        {(() => {
-                                            const currentBackpack = backpack.filter(i => i.owner === backpackOwnerFilter);
-                                            const totalLiquids = currentBackpack
-                                                .filter(i => i.categoria === 'Liquido')
-                                                .reduce((acc, curr) => acc + ((Number(curr.ml) || 0) * (Number(curr.qty) || 1)), 0);
+                                {(() => {
+                                    const currentItems = backpack.filter(i => i.owner === backpackOwnerFilter);
+                                    const totalItems = currentItems.length;
+                                    const packedItems = currentItems.filter(i => i.packed).length;
+                                    const percent = totalItems > 0 ? Math.round((packedItems / totalItems) * 100) : 0;
+                                    const isComplete = totalItems > 0 && packedItems === totalItems;
 
-                                            if (totalLiquids > 0) {
-                                                return (
-                                                    <div className={`text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 ${totalLiquids > 1000 ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-500'}`}>
-                                                        💧 {totalLiquids}ml {totalLiquids > 1000 && '!'}
+                                    return (
+                                        <>
+                                            <div className="flex justify-between items-end mb-1.5">
+                                                <div className="flex items-center gap-2">
+                                                    <Backpack size={18} className={isComplete ? "text-green-500" : "text-gray-300"} />
+                                                    <div className={`text-xs font-bold uppercase tracking-wide ${isComplete ? "text-green-600" : "text-gray-500"}`}>
+                                                        {packedItems}/{totalItems} OGGETTI
                                                     </div>
-                                                );
-                                            }
-                                        })()}
-                                    </div>
-                                    <div className="text-[10px] font-bold text-gray-400">
-                                        {backpack.filter(i => i.owner === backpackOwnerFilter).length > 0 ? Math.round((backpack.filter(i => i.owner === backpackOwnerFilter && i.packed).length / backpack.filter(i => i.owner === backpackOwnerFilter).length) * 100) : 0}%
-                                    </div>
-                                </div>
-                                <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                                    <div
-                                        className="bg-black h-1.5 rounded-full transition-all duration-500 ease-out"
-                                        style={{ width: `${backpack.filter(i => i.owner === backpackOwnerFilter).length > 0 ? (backpack.filter(i => i.owner === backpackOwnerFilter && i.packed).length / backpack.filter(i => i.owner === backpackOwnerFilter).length) * 100 : 0}%` }}
-                                    ></div>
-                                </div>
+
+                                                    {/* Liquid Logic can stay or be part of this block, let's keep it simply inserted or just copy logic if needed, but for minimal diff let's assume valid scope or re-implement quickly. 
+                                                        Actually, I need to preserve the logic for liquids inside this block or it will be cut.
+                                                        Re-implementing liquid logic here.
+                                                    */}
+                                                    {(() => {
+                                                        const totalLiquids = currentItems
+                                                            .filter(i => i.categoria === 'Liquido')
+                                                            .reduce((acc, curr) => acc + ((Number(curr.ml) || 0) * (Number(curr.qty) || 1)), 0);
+
+                                                        if (totalLiquids > 0) {
+                                                            return (
+                                                                <div className={`text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 ${totalLiquids > 1000 ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-500'}`}>
+                                                                    💧 {totalLiquids}ml {totalLiquids > 1000 && '!'}
+                                                                </div>
+                                                            );
+                                                        }
+                                                    })()}
+                                                </div>
+                                                <div className={`text-[10px] font-bold ${isComplete ? "text-green-600 text-sm" : "text-gray-400"}`}>
+                                                    {percent}%
+                                                </div>
+                                            </div>
+
+                                            {isComplete && (
+                                                <div className="mb-2 bg-green-50 border border-green-100 p-2 rounded-lg flex items-center justify-center gap-2 animate-pulse">
+                                                    <span className="text-xl">🚀</span>
+                                                    <span className="font-bold text-green-700 text-sm">Zaino Pronto!</span>
+                                                </div>
+                                            )}
+
+                                            <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                                                <div
+                                                    className={`${isComplete ? 'bg-green-500' : 'bg-black'} h-1.5 rounded-full transition-all duration-500 ease-out`}
+                                                    style={{ width: `${percent}%` }}
+                                                ></div>
+                                            </div>
+                                        </>
+                                    );
+                                })()}
                             </div>
                         </div>
 
-                        <Button variant="outline" onClick={() => { setNewItemBackpack(prev => ({ ...prev, owner: backpackOwnerFilter })); setActiveModal('backpack'); }} icon={Plus}>
+                        <Button variant="outline" onClick={() => { setNewItemBackpack(prev => ({ ...prev, owner: backpackOwnerFilter })); setEditingId(null); setActiveModal('backpack'); }} icon={Plus}>
                             Aggiungi a {backpackOwnerFilter.split(' ')[0]}
                         </Button>
 
@@ -1340,10 +1391,14 @@ const App = () => {
                                                         {/* Toggle Packed (Backpack Icon) */}
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); togglePacked(item.id, item.packed); }}
-                                                            className={`p-2.5 rounded-full transition-all duration-200 ${item.packed ? 'bg-amber-50 text-amber-500 shadow-sm border border-amber-100' : 'bg-transparent text-gray-300 hover:text-gray-500 hover:bg-gray-50'}`}
+                                                            className={`p-2.5 rounded-full transition-all duration-200 ${item.packed ? 'bg-green-50 text-green-500 shadow-sm border border-green-100' : 'bg-transparent text-gray-300 hover:text-gray-500 hover:bg-gray-50'}`}
                                                             title={item.packed ? "Rimuovi dallo zaino" : "Metti nello zaino"}
                                                         >
                                                             <Backpack size={20} strokeWidth={item.packed ? 2.5 : 2} />
+                                                        </button>
+
+                                                        <button onClick={(e) => { e.stopPropagation(); openEditBackpackItem(item); }} className="text-gray-300 hover:text-blue-500 p-2 rounded-full transition-colors">
+                                                            <Edit size={16} />
                                                         </button>
 
                                                         <button onClick={(e) => { e.stopPropagation(); handleDeleteBackpackItem(item.id); }} className="text-gray-300 hover:text-red-500 p-2 rounded-full transition-colors">
@@ -1725,7 +1780,7 @@ const App = () => {
             </Modal>
 
             {/* Add Backpack Item Modal */}
-            <Modal isOpen={activeModal === 'backpack'} onClose={() => setActiveModal(null)} title="Nuovo Oggetto">
+            <Modal isOpen={activeModal === 'backpack'} onClose={() => { setActiveModal(null); setEditingId(null); }} title={editingId ? "Modifica Oggetto" : "Nuovo Oggetto"}>
                 <InputGroup label="Nome Oggetto">
                     <input
                         id="backpack-input"
@@ -1801,7 +1856,7 @@ const App = () => {
                     <span>Fuori dallo zaino</span>
                 </div>
                 <Button onClick={handleAddBackpackItem} className="mt-4">
-                    Aggiungi
+                    {editingId ? "Salva Modifiche" : "Aggiungi"}
                 </Button>
             </Modal>
 
