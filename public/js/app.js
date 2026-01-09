@@ -20,6 +20,8 @@ const Edit = (props) => (<IconBase {...props}><path d="M17 3a2.828 2.828 0 1 1 4
 const Trash = (props) => (<IconBase {...props}><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></IconBase>);
 const Smartphone = (props) => (<IconBase {...props}><rect width="14" height="20" x="5" y="2" rx="2" ry="2" /><path d="M12 18h.01" /></IconBase>);
 const Search = (props) => (<IconBase {...props}><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></IconBase>);
+const Calendar = (props) => (<IconBase {...props}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></IconBase>);
+const Clock = (props) => (<IconBase {...props}><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></IconBase>);
 
 // --- DATI INIZIALI (SEED DATA) ---
 const seedItinerary = [
@@ -61,7 +63,7 @@ const seedItinerary = [
 ];
 
 const seedTransport = [
-    { partenza: "London Gatwick (LGW)", arrivo: "NOX Kensington", dettaglio: "Southern Train", data: "25/02/2026", ora: "19:15", costo: "£ 33.00", stato: "Da prenotare" }
+    { partenza: "London Gatwick (LGW)", arrivo: "NOX Kensington", dettaglio: "Southern Train", data: "25/02/2026", ora: "19:15", costo: "£ 33.00", pagato: false, prenotato: false }
 ];
 
 const seedExpenses = [
@@ -88,10 +90,17 @@ const seedExpenses = [
     { item: "St. Paul's Cathedral", data: "-", costo: 54.00, valuta: "£", pagato: false, prenotato: false, chi: "-", note: "£27.00 / persona" },
 ];
 
+const seedDays = [
+    {
+        data: "2026-02-25",
+        events: []
+    }
+];
+
 // --- COMPONENTS ---
 
-const Card = ({ children, className = "" }) => (
-    <div className={`bg-white rounded-xl shadow-sm border border-gray-100 p-4 ${className}`}>
+const Card = ({ children, className = "", noPadding = false, ...props }) => (
+    <div className={`bg-white rounded-xl shadow-sm border border-gray-100 ${noPadding ? "" : "p-4"} ${className}`} {...props}>
         {children}
     </div>
 );
@@ -161,6 +170,7 @@ const InputGroup = ({ label, children }) => (
 const App = () => {
     const [activeTab, setActiveTab] = useState("itinerary");
     const [itinerary, setItinerary] = useState([]);
+    const [days, setDays] = useState([]); // NEW: Days state
     const [transport, setTransport] = useState([]);
     const [expenses, setExpenses] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -172,7 +182,9 @@ const App = () => {
 
     // New Item States
     const [newItemItinerary, setNewItemItinerary] = useState({ nome: "", categoria: "Museo", quartiere: "", durata: "", orari: "", eccezioni: "", img: "", mapEmbed: "" });
-    const [newItemTransport, setNewItemTransport] = useState({ dettaglio: "", partenza: "", arrivo: "", data: "", ora: "", costo: "", stato: "Da prenotare" });
+    const [newItemDay, setNewItemDay] = useState({ data: "" });
+    const [newItemEvent, setNewItemEvent] = useState({ type: 'attraction', attractionId: "", customTitle: "", time: "", notes: "" });
+    const [newItemTransport, setNewItemTransport] = useState({ dettaglio: "", partenza: "", arrivo: "", data: "", ora: "", costo: "", pagato: false, prenotato: false });
     const [newItemExpense, setNewItemExpense] = useState({ item: "", costo: "", valuta: "£", pagato: false, prenotato: false, chi: "", note: "" });
 
     // Editing State
@@ -184,7 +196,7 @@ const App = () => {
     const [searchQuery, setSearchQuery] = useState("");
     const [filterStatusExpenses, setFilterStatusExpenses] = useState("Tutti");
 
-    const [sortOrder, setSortOrder] = useState("default"); // default, alpha
+    const [sortOrder, setSortOrder] = useState("alpha"); // default, alpha
 
     // PWA Install State
     const [deferredPrompt, setDeferredPrompt] = useState(null);
@@ -231,17 +243,53 @@ const App = () => {
             setIsLoading(false);
         });
 
+        const unsubDays = db.collection("days").orderBy("data").onSnapshot(snapshot => {
+            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setDays(data);
+        });
+
         return () => {
             unsubItinerary();
             unsubTransport();
             unsubExpenses();
+            unsubDays();
         };
     }, []);
 
     // --- STATS LOGIC ---
-    const paidEUR = expenses.filter(e => e.valuta === "€" && e.pagato).reduce((acc, curr) => acc + Number(curr.costo), 0);
-    const paidGBP = expenses.filter(e => e.valuta === "£" && e.pagato).reduce((acc, curr) => acc + Number(curr.costo), 0);
-    const toPayGBP = expenses.filter(e => e.valuta === "£" && !e.pagato).reduce((acc, curr) => acc + Number(curr.costo), 0);
+    // --- STATS LOGIC ---
+    const EXCHANGE_RATE = 1.15;
+
+    const parseCost = (costStr) => {
+        if (!costStr) return { amount: 0, currency: "£" };
+        const currency = costStr.includes("€") ? "€" : "£";
+        const amount = parseFloat(costStr.replace(/[^0-9.]/g, "")) || 0;
+        return { amount, currency };
+    };
+
+    const paidEUR = expenses.filter(e => e.valuta === "€" && e.pagato).reduce((acc, curr) => acc + Number(curr.costo), 0)
+        + transport.filter(t => t.pagato).reduce((acc, curr) => {
+            const { amount, currency } = parseCost(curr.costo);
+            return currency === "€" ? acc + amount : acc;
+        }, 0);
+
+    const paidGBP = expenses.filter(e => e.valuta === "£" && e.pagato).reduce((acc, curr) => acc + Number(curr.costo), 0)
+        + transport.filter(t => t.pagato).reduce((acc, curr) => {
+            const { amount, currency } = parseCost(curr.costo);
+            return currency === "£" ? acc + amount : acc;
+        }, 0);
+
+    const totalPaidEUR = paidEUR + (paidGBP * EXCHANGE_RATE);
+
+    const toPayGBP = expenses.filter(e => e.valuta === "£" && !e.pagato).reduce((acc, curr) => acc + Number(curr.costo), 0)
+        + transport.filter(t => !t.pagato).reduce((acc, curr) => {
+            const { amount, currency } = parseCost(curr.costo);
+            // Assuming unpaid Euro transport is rare or dealt with same way, but usually we care about currency used.
+            // If it's Euro and unpaid, strictly speaking it's not GBP to pay.
+            // But if we want a global "to pay" maybe we should separate or convert.
+            // For now, let's stick to GBP for "Previsto (GBP)" as requested by label, so only sum £.
+            return currency === "£" ? acc + amount : acc;
+        }, 0);
 
     // --- OPTIMISTIC UPDATES ---
     const toggleVisit = (id, currentStatus) => {
@@ -261,6 +309,16 @@ const App = () => {
     const toggleBooked = (id, currentStatus) => {
         setExpenses(prev => prev.map(e => e.id === id ? { ...e, prenotato: !currentStatus } : e));
         db.collection("expenses").doc(id).update({ prenotato: !currentStatus });
+    };
+
+    const toggleTransportPaid = (id, currentStatus) => {
+        setTransport(prev => prev.map(t => t.id === id ? { ...t, pagato: !currentStatus } : t));
+        db.collection("transport").doc(id).update({ pagato: !currentStatus });
+    };
+
+    const toggleTransportBooked = (id, currentStatus) => {
+        setTransport(prev => prev.map(t => t.id === id ? { ...t, prenotato: !currentStatus } : t));
+        db.collection("transport").doc(id).update({ prenotato: !currentStatus });
     };
 
 
@@ -355,7 +413,7 @@ const App = () => {
 
         setActiveModal(null);
         setEditingId(null);
-        setNewItemTransport({ dettaglio: "", partenza: "", arrivo: "", data: "", ora: "", costo: "", stato: "Da prenotare" });
+        setNewItemTransport({ dettaglio: "", partenza: "", arrivo: "", data: "", ora: "", costo: "", pagato: false, prenotato: false });
     };
 
     const openEditTransport = (item) => {
@@ -401,6 +459,61 @@ const App = () => {
         });
     };
 
+    // Days & Events Handlers
+    const handleAddDay = async () => {
+        if (!newItemDay.data) return;
+
+        await db.collection("days").add({
+            data: newItemDay.data,
+            events: []
+        });
+
+        setActiveModal(null);
+        setNewItemDay({ data: "" });
+    };
+
+    const handleDeleteDay = async (id) => {
+        requestConfirm("Elimina Giornata", "Eliminare questa giornata e tutti i suoi eventi?", async () => {
+            await db.collection("days").doc(id).delete();
+        });
+    };
+
+    const openAddEvent = (dayId) => {
+        setEditingId(dayId); // Using editingId to store the temporary Day ID we are adding to
+        setActiveModal('event');
+    };
+
+    const handleAddEvent = async () => {
+        if (!editingId) return;
+        if (newItemEvent.type !== 'custom' && !newItemEvent.attractionId) return;
+        if (newItemEvent.type === 'custom' && !newItemEvent.customTitle) return;
+
+        const dayRef = db.collection("days").doc(editingId);
+        const dayDoc = days.find(d => d.id === editingId);
+
+        const newEventObj = {
+            id: 'evt_' + Date.now(),
+            ...newItemEvent
+        };
+
+        const updatedEvents = [...(dayDoc.events || []), newEventObj];
+        // Sort events by time
+        updatedEvents.sort((a, b) => a.time.localeCompare(b.time));
+
+        await dayRef.update({ events: updatedEvents });
+
+        setActiveModal(null);
+        setEditingId(null);
+        setNewItemEvent({ attractionId: "", time: "", notes: "" });
+    };
+
+    const handleDeleteEvent = async (dayId, eventId) => {
+        const dayRef = db.collection("days").doc(dayId);
+        const dayDoc = days.find(d => d.id === dayId);
+        const updatedEvents = dayDoc.events.filter(e => e.id !== eventId);
+        await dayRef.update({ events: updatedEvents });
+    };
+
     const handleInitializeData = async () => {
         requestConfirm("Reset Dati", "ATTENZIONE: Questo cancellerà tutti i dati e li ripristinerà a quelli di default. Questa azione è irreversibile. Procedere?", async () => {
             const batch = db.batch();
@@ -418,6 +531,10 @@ const App = () => {
             });
             seedExpenses.forEach(item => {
                 const docRef = db.collection("expenses").doc();
+                batch.set(docRef, item);
+            });
+            seedDays.forEach(item => {
+                const docRef = db.collection("days").doc();
                 batch.set(docRef, item);
             });
 
@@ -458,10 +575,9 @@ const App = () => {
                 <Card className="flex flex-col items-center justify-center py-3 border-b-4 border-b-green-500 shadow-md">
                     <span className="text-xs text-gray-500 uppercase font-bold tracking-wider">Già Pagato</span>
                     <div className="flex flex-col items-center">
-                        <span className="text-xl font-bold text-gray-800">€ {paidEUR.toFixed(2)}</span>
-                        {paidGBP > 0 && <span className="text-sm font-semibold text-gray-500">+ £ {paidGBP.toFixed(2)}</span>}
+                        <span className="text-xl font-bold text-gray-800">€ {totalPaidEUR.toFixed(2)}</span>
                     </div>
-                    <span className="text-[10px] text-gray-400">£ {(paidEUR / 2).toFixed(2)} a testa</span>
+                    <span className="text-[10px] text-gray-400">€ {(totalPaidEUR / 2).toFixed(2)} a testa</span>
                 </Card>
                 <Card className="flex flex-col items-center justify-center py-3 border-b-4 border-b-red-500 shadow-md">
                     <span className="text-xs text-gray-500 uppercase font-bold tracking-wider">Previsto (GBP)</span>
@@ -478,6 +594,12 @@ const App = () => {
                         className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${activeTab === 'itinerary' ? 'bg-red-50 text-red-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
                     >
                         Itinerario
+                    </button>
+                    <button
+                        onClick={() => setActiveTab("attractions")}
+                        className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${activeTab === 'attractions' ? 'bg-red-50 text-red-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                    >
+                        Attrazioni
                     </button>
                     <button
                         onClick={() => setActiveTab("expenses")}
@@ -497,8 +619,8 @@ const App = () => {
             {/* Main Content Area */}
             <div className="flex-1 px-4 pb-24 overflow-y-auto scroller">
 
-                {/* ITINERARY TAB */}
-                {activeTab === "itinerary" && (
+                {/* ATTRACTIONS TAB (Old Itinerary) */}
+                {activeTab === "attractions" && (
                     <div className="space-y-4">
                         {/* Compact Header Filters */}
                         <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 space-y-3">
@@ -555,60 +677,95 @@ const App = () => {
                         </div>
 
                         {/* List */}
+                        <Button variant="outline" onClick={() => { setEditingId(null); setNewItemItinerary({ nome: "", categoria: "Museo", quartiere: "", durata: "", orari: "", eccezioni: "", img: "", mapEmbed: "" }); setActiveModal('itinerary'); }} icon={Plus}>
+                            Aggiungi Attrazione
+                        </Button>
                         {filteredItinerary.map(place => (
-                            <Card key={place.id} className="relative overflow-hidden transition-all hover:shadow-md group">
-                                {place.visited && <div className="absolute inset-0 bg-white/60 z-10 flex items-center justify-center backdrop-blur-[1px] transition-opacity pointer-events-none"><div className="bg-green-100/90 text-green-700 px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1 shadow-sm"><CheckCircle size={16} /> Visitato</div></div>}
-
-                                <div className="flex justify-between items-start mb-2 relative z-20">
-                                    <div>
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <h3 className="font-bold text-gray-800 text-lg leading-tight">{place.nome}</h3>
-                                        </div>
-                                        <div className="flex flex-wrap gap-2 mt-1">
-                                            <Badge type={place.categoria}>{place.categoria}</Badge>
-                                            <span className="text-xs text-gray-500 flex items-center gap-1 bg-gray-50 px-2 py-0.5 rounded">
-                                                <MapPin size={10} /> {place.quartiere}
-                                            </span>
+                            <Card key={place.id} onClick={() => setViewingItem(place)} noPadding className="relative overflow-hidden transition-all hover:shadow-md group flex flex-col cursor-pointer">
+                                {place.visited && (
+                                    <div className="absolute inset-0 bg-white/60 z-30 flex items-center justify-center backdrop-blur-[1px] transition-opacity pointer-events-none">
+                                        <div className="bg-green-100/90 text-green-700 px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1 shadow-sm border border-green-200">
+                                            <CheckCircle size={16} /> Visitato
                                         </div>
                                     </div>
-                                    <div className="flex gap-2">
-                                        <button onClick={() => openEditItinerary(place)} className="text-gray-300 hover:text-blue-500 p-2 rounded-full hover:bg-blue-50 transition-colors">
-                                            <Edit size={18} />
+                                )}
+
+                                {/* Image Section */}
+                                <div className="relative w-full h-48 bg-gray-200 overflow-hidden group-hover:brightness-[0.98] transition-all">
+                                    {place.img ? (
+                                        <img src={place.img} alt={place.nome} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                                    ) : (
+                                        <div className="w-full h-full flex flex-col items-center justify-center text-gray-300 bg-gray-100">
+                                            <MapPin size={48} className="opacity-20 translate-y-2" />
+                                            {/* Optional: Pattern or gradient could go here */}
+                                        </div>
+                                    )}
+
+                                    {/* Overlay Gradient for Text readability if we put text on img (not doing for now, but good for style) */}
+                                    {/* <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" /> */}
+
+                                    {/* Floating Actions (Top Right) */}
+                                    <div className="absolute top-2 right-2 flex gap-1 z-20 opacity-90">
+                                        <button onClick={(e) => { e.stopPropagation(); openEditItinerary(place); }} className="bg-white/90 text-gray-600 hover:text-blue-600 p-1.5 rounded-lg shadow-sm backdrop-blur-sm hover:bg-white transition-all transform hover:scale-105">
+                                            <Edit size={16} />
                                         </button>
-                                        <button onClick={() => handleDeleteItinerary(place.id)} className="text-gray-300 hover:text-red-500 p-2 rounded-full hover:bg-red-50 transition-colors">
-                                            <Trash size={18} />
+                                        <button onClick={(e) => { e.stopPropagation(); handleDeleteItinerary(place.id); }} className="bg-white/90 text-gray-600 hover:text-red-600 p-1.5 rounded-lg shadow-sm backdrop-blur-sm hover:bg-white transition-all transform hover:scale-105">
+                                            <Trash size={16} />
                                         </button>
-                                        <button onClick={() => setViewingItem(place)} className="text-gray-300 hover:text-blue-500 p-2 rounded-full hover:bg-blue-50 transition-colors">
-                                            <AlertCircle size={18} />
-                                        </button>
-                                        <button onClick={() => toggleVisit(place.id, place.visited)} className={`transition-colors p-2 rounded-full ${place.visited ? 'text-green-600 bg-green-50' : 'text-gray-300 hover:text-gray-400 hover:bg-gray-100'}`}>
-                                            <CheckCircle size={24} />
-                                        </button>
+                                    </div>
+
+                                    {/* Category Badge (Top Left) */}
+                                    <div className="absolute top-3 left-3 z-20">
+                                        <Badge type={place.categoria}>{place.categoria}</Badge>
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-2 text-sm mt-3 bg-gray-50/80 p-3 rounded-xl border border-gray-100">
-                                    <div className="flex flex-col">
-                                        <span className="text-[10px] text-gray-400 uppercase font-black tracking-wider">Orari</span>
-                                        <span className="font-semibold text-gray-700">{place.orari}</span>
+                                {/* Content Section */}
+                                <div className="p-4 flex flex-col flex-1 relative bg-white">
+
+                                    {/* Header: Title & Location */}
+                                    <div className="flex justify-between items-start mb-3">
+                                        <div className="flex-1 min-w-0 pr-2">
+                                            <h3 className="font-bold text-gray-800 text-xl leading-tight truncate">{place.nome}</h3>
+                                            <div className="flex items-center gap-1 text-gray-500 text-xs mt-1 font-medium">
+                                                <MapPin size={12} className="text-gray-400" />
+                                                <span>{place.quartiere}</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Actions Row (Secondary/Common) */}
+                                        <div className="flex items-center gap-1 shrink-0">
+                                            <button onClick={(e) => { e.stopPropagation(); toggleVisit(place.id, place.visited); }} className={`transition-all p-1.5 rounded-full ${place.visited ? 'text-green-600 bg-green-50 scale-110' : 'text-gray-300 hover:text-green-500 hover:bg-green-50'}`} title={place.visited ? "Segna come non visitato" : "Segna come visitato"}>
+                                                <CheckCircle size={24} />
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-[10px] text-gray-400 uppercase font-black tracking-wider">Durata</span>
-                                        <span className="font-semibold text-gray-700">{place.durata}</span>
+
+                                    {/* Info Grid */}
+                                    <div className="grid grid-cols-2 gap-2 text-xs mt-auto">
+                                        <div className="bg-gray-50 p-2 rounded-lg border border-gray-100/50">
+                                            <span className="block text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-0.5">Orari</span>
+                                            <span className="font-semibold text-gray-700 truncate block" title={place.orari}>{place.orari || "//"}</span>
+                                        </div>
+                                        <div className="bg-gray-50 p-2 rounded-lg border border-gray-100/50">
+                                            <span className="block text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-0.5">Durata</span>
+                                            <span className="font-semibold text-gray-700 truncate block">{place.durata || "//"}</span>
+                                        </div>
                                     </div>
+
+                                    {/* Exceptions / Warnings */}
                                     {place.eccezioni && (
-                                        <div className="col-span-2 border-t border-gray-200/50 pt-2 mt-1">
-                                            <span className="text-xs text-rose-500 font-bold flex items-center gap-1.5">
-                                                <AlertCircle size={12} /> {place.eccezioni}
-                                            </span>
+                                        <div className="mt-2 pt-2 border-t border-gray-100">
+                                            <p className="text-xs text-rose-600 font-medium flex items-center gap-1.5">
+                                                <AlertCircle size={12} className="shrink-0" />
+                                                <span className="truncate">{place.eccezioni}</span>
+                                            </p>
                                         </div>
                                     )}
                                 </div>
                             </Card>
                         ))}
-                        <Button variant="outline" onClick={() => { setEditingId(null); setNewItemItinerary({ nome: "", categoria: "Museo", quartiere: "", durata: "", orari: "", eccezioni: "", img: "", mapEmbed: "" }); setActiveModal('itinerary'); }} icon={Plus}>
-                            Aggiungi Attrazione
-                        </Button>
+
                     </div>
                 )}
 
@@ -636,6 +793,10 @@ const App = () => {
                                 {sortOrder === 'alpha' ? 'A-Z' : 'Default'}
                             </button>
                         </div>
+
+                        <Button variant="green" onClick={() => setActiveModal('expenses')} icon={Plus}>
+                            Aggiungi Spesa
+                        </Button>
 
                         {filteredExpenses.map(exp => (
                             <Card key={exp.id} className="transition-all hover:shadow-md border-l-4 border-l-transparent hover:border-l-indigo-500">
@@ -679,9 +840,7 @@ const App = () => {
                                 </div>
                             </Card>
                         ))}
-                        <Button variant="green" onClick={() => setActiveModal('expenses')} icon={Plus}>
-                            Aggiungi Spesa
-                        </Button>
+
 
                         <div className="mt-6 bg-amber-50 border border-amber-100 rounded-xl p-4 text-sm text-amber-900 shadow-sm">
                             <p className="font-bold mb-1 flex items-center gap-2"><div className="w-2 h-2 bg-amber-500 rounded-full"></div>Info Budget</p>
@@ -695,6 +854,9 @@ const App = () => {
                 {/* TRANSPORT TAB */}
                 {activeTab === "transport" && (
                     <div className="space-y-4">
+                        <Button variant="blue" onClick={() => setActiveModal('transport')} icon={Plus}>
+                            Aggiungi Viaggio
+                        </Button>
                         {transport.map(trip => (
                             <Card key={trip.id} className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
                                 <div className="flex justify-between items-start mb-3">
@@ -703,7 +865,6 @@ const App = () => {
                                         <span>{trip.dettaglio}</span>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <Badge type={trip.stato}>{trip.stato}</Badge>
                                         <div className="flex gap-1 ml-1">
                                             <button onClick={() => openEditTransport(trip)} className="text-gray-300 hover:text-blue-500 p-1 rounded-full"><Edit size={16} /></button>
                                             <button onClick={() => handleDeleteTransport(trip.id)} className="text-gray-300 hover:text-red-500 p-1 rounded-full"><Trash size={16} /></button>
@@ -720,7 +881,6 @@ const App = () => {
                                         {/* Line visualization */}
                                         <div className="absolute left-[-10px] top-2 bottom-2 w-0.5 bg-gray-200"></div>
                                         <div className="absolute left-[-13px] top-1.5 w-2 h-2 rounded-full border-2 border-gray-300 bg-white"></div>
-                                        <div className="absolute left-[-13px] bottom-1.5 w-2 h-2 rounded-full border-2 border-gray-300 bg-gray-300"></div>
 
                                         <div className="text-sm font-bold text-gray-800">{trip.partenza}</div>
                                         <div className="text-sm font-bold text-gray-800 mt-2">{trip.arrivo}</div>
@@ -728,16 +888,127 @@ const App = () => {
                                 </div>
 
                                 <div className="flex justify-between items-center pt-3 border-t border-gray-100">
-                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Costo</span>
-                                    <span className="font-bold text-gray-900">{trip.costo}</span>
+                                    <div className="flex flex-wrap gap-2">
+                                        <button
+                                            onClick={() => toggleTransportBooked(trip.id, trip.prenotato)}
+                                            className={`text-[10px] font-bold px-2 py-1 rounded-md border transition-all flex items-center gap-1 ${trip.prenotato ? 'bg-purple-100 text-purple-700 border-purple-200' : 'bg-gray-50 text-gray-400 border-gray-200 hover:border-purple-300'}`}
+                                        >
+                                            {trip.prenotato ? '✓ Prenotato' : '○ Da Prenotare'}
+                                        </button>
+                                        <button
+                                            onClick={() => toggleTransportPaid(trip.id, trip.pagato)}
+                                            className={`text-[10px] font-bold px-2 py-1 rounded-md border transition-all flex items-center gap-1 ${trip.pagato ? 'bg-green-100 text-green-700 border-green-200' : 'bg-gray-50 text-gray-400 border-gray-200 hover:border-green-300'}`}
+                                        >
+                                            {trip.pagato ? '✓ Pagato' : '○ Da Pagare'}
+                                        </button>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Costo</span>
+                                        <span className="font-bold text-gray-900">{trip.costo}</span>
+                                    </div>
                                 </div>
                             </Card>
                         ))}
-                        <Button variant="blue" onClick={() => setActiveModal('transport')} icon={Plus}>
-                            Aggiungi Viaggio
-                        </Button>
                     </div>
                 )}
+
+                {activeTab === "itinerary" && (
+                    <div className="space-y-6">
+                        <div className="flex justify-between items-center bg-white p-3 rounded-xl shadow-sm border border-gray-100 mb-2">
+                            <h2 className="font-bold text-gray-800 flex items-center gap-2">
+                                <Calendar size={20} className="text-red-500" /> Il tuo Viaggio
+                            </h2>
+                            <button onClick={() => setActiveModal('day')} className="bg-black text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-gray-800 transition-colors">
+                                + Giornata
+                            </button>
+                        </div>
+
+                        {days.map(day => {
+                            const dateObj = new Date(day.data);
+                            const dayName = dateObj.toLocaleDateString('it-IT', { weekday: 'long' });
+                            const dayNumber = dateObj.getDate();
+                            const monthName = dateObj.toLocaleDateString('it-IT', { month: 'long' });
+
+                            // Date comparison logic
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+                            const checkDate = new Date(day.data);
+                            checkDate.setHours(0, 0, 0, 0);
+
+                            const isPast = checkDate < today;
+                            const isToday = checkDate.getTime() === today.getTime();
+
+                            return (
+                                <div key={day.id} className={`relative pl-4 border-l-2 pb-8 last:pb-0 last:border-l-0 ${isPast ? 'border-gray-100 opacity-60 grayscale-[0.5]' : 'border-gray-200'}`}>
+                                    <div className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full border-4 border-white shadow-sm ${isToday ? 'bg-blue-500 scale-125' : (isPast ? 'bg-gray-300' : 'bg-red-500')}`}></div>
+
+                                    <div className={`rounded-xl shadow-sm border overflow-hidden mb-4 ${isToday ? 'bg-blue-50 border-blue-200 ring-2 ring-blue-100' : (isPast ? 'bg-gray-50 border-gray-100' : 'bg-white border-gray-100')}`}>
+                                        <div className={`border-b p-3 flex justify-between items-center ${isToday ? 'bg-blue-100/50 border-blue-200' : (isPast ? 'bg-gray-100 border-gray-100' : 'bg-gray-50 border-gray-100')}`}>
+                                            <div>
+                                                <h3 className="font-black text-gray-800 text-lg capitalize flex items-center gap-2">
+                                                    {dayName} <span className="text-red-500">{dayNumber}</span>
+                                                </h3>
+                                                <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">{monthName} 2026</p>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <button onClick={() => openAddEvent(day.id)} className="text-blue-600 bg-blue-50 hover:bg-blue-100 p-1.5 rounded-lg transition-colors text-xs font-bold flex items-center gap-1">
+                                                    <Plus size={14} /> Evento
+                                                </button>
+                                                <button onClick={() => handleDeleteDay(day.id)} className="text-gray-400 hover:text-red-500 p-1.5 rounded-lg transition-colors">
+                                                    <Trash size={16} />
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div className="divide-y divide-gray-50">
+                                            {(!day.events || day.events.length === 0) && (
+                                                <div className="p-8 text-center text-gray-400 text-sm italic">
+                                                    Nessun evento pianificato per oggi
+                                                </div>
+                                            )}
+                                            {day.events && day.events.map(event => {
+                                                const isCustom = event.type === 'custom';
+                                                const attr = !isCustom ? itinerary.find(i => i.id === event.attractionId) : null;
+                                                return (
+                                                    <div key={event.id} className="p-3 hover:bg-gray-50 transition-colors flex gap-3 group">
+                                                        <div className="flex flex-col items-center justify-start pt-1 min-w-[40px]">
+                                                            <span className="font-bold text-gray-700 text-sm">{event.time}</span>
+                                                            <div className="h-full w-0.5 bg-gray-100 mt-2 mb-[-12px] group-last:hidden"></div>
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <div className="flex justify-between items-start">
+                                                                <h4 className="font-bold text-gray-800 text-sm">
+                                                                    {isCustom ? (
+                                                                        <span className="flex items-center gap-2">
+                                                                            <span className="p-1 bg-gray-100 rounded text-gray-600"><Edit size={12} /></span>
+                                                                            {event.customTitle}
+                                                                        </span>
+                                                                    ) : (
+                                                                        attr ? (
+                                                                            <span>
+                                                                                {attr.nome} <span className="font-normal text-gray-400 text-xs ml-1">({attr.durata})</span>
+                                                                            </span>
+                                                                        ) : 'Attrazione rimossa'
+                                                                    )}
+                                                                </h4>
+                                                                <button onClick={() => handleDeleteEvent(day.id, event.id)} className="text-gray-200 group-hover:text-red-400 p-1 transition-colors">
+                                                                    <X size={14} />
+                                                                </button>
+                                                            </div>
+                                                            {!isCustom && attr && <p className="text-xs text-gray-500 flex items-center gap-1 mt-1"><MapPin size={10} /> {attr.quartiere}</p>}
+                                                            {event.notes && <p className="text-xs text-amber-600 bg-amber-50 inline-block px-1.5 py-0.5 rounded mt-1 border border-amber-100">{event.notes}</p>}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+
             </div>
 
             {/* MODALS */}
@@ -749,11 +1020,9 @@ const App = () => {
                 </InputGroup>
                 <InputGroup label="Categoria">
                     <select className="w-full border-2 border-gray-200 rounded-xl p-3 text-sm bg-white focus:border-black focus:outline-none" value={newItemItinerary.categoria} onChange={e => setNewItemItinerary({ ...newItemItinerary, categoria: e.target.value })}>
-                        <option>Museo</option>
-                        <option>Mercato</option>
-                        <option>Parco</option>
-                        <option>Grattacielo</option>
-                        <option>Altro</option>
+                        {[...new Set(["Museo", "Mercato", "Parco", "Piazza", "Ristorante", "Tempo libero", "Grattacielo", "Altro", ...categories.filter(c => c !== "Tutti")])].sort().map(cat => (
+                            <option key={cat}>{cat}</option>
+                        ))}
                     </select>
                 </InputGroup>
                 <InputGroup label="Quartiere">
@@ -848,11 +1117,258 @@ const App = () => {
                 <Button variant="green" onClick={handleAddExpense} className="mt-4">Salva Spesa</Button>
             </Modal>
 
+            <Modal isOpen={activeModal === 'day'} onClose={() => setActiveModal(null)} title="Nuova Giornata">
+                <InputGroup label="Data">
+                    <input
+                        type="date"
+                        className="w-full p-2 bg-gray-50 rounded-lg border border-gray-200 outline-none focus:border-black transition-all"
+                        value={newItemDay.data}
+                        onChange={(e) => setNewItemDay({ ...newItemDay, data: e.target.value })}
+                    />
+                </InputGroup>
+                <Button onClick={handleAddDay}>Salva Giornata</Button>
+            </Modal>
+
+            {/* Add Event Modal with Rich Selector & Custom Mode */}
+            <Modal isOpen={activeModal === 'event'} onClose={() => { setActiveModal(null); setEditingId(null); setNewItemEvent({ type: 'attraction', attractionId: "", customTitle: "", time: "", notes: "" }); }} title="Aggiungi Evento">
+                {/* Type Toggle */}
+                <div className="flex bg-gray-100 p-1 rounded-lg mb-4">
+                    <button
+                        onClick={() => setNewItemEvent({ ...newItemEvent, type: 'attraction' })}
+                        className={`flex-1 py-2 text-sm font-bold rounded-md transition-all ${newItemEvent.type !== 'custom' ? 'bg-white text-black shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                    >
+                        Attrazione
+                    </button>
+                    <button
+                        onClick={() => setNewItemEvent({ ...newItemEvent, type: 'custom' })}
+                        className={`flex-1 py-2 text-sm font-bold rounded-md transition-all ${newItemEvent.type === 'custom' ? 'bg-white text-black shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                    >
+                        Altro / Note
+                    </button>
+                </div>
+
+                {newItemEvent.type === 'custom' ? (
+                    // Custom Event Form
+                    <>
+                        <InputGroup label="Titolo Attività">
+                            <input
+                                type="text"
+                                placeholder="Es. Pranzo, Passeggiata, Shopping..."
+                                className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:border-black transition-all"
+                                value={newItemEvent.customTitle || ""}
+                                onChange={(e) => setNewItemEvent({ ...newItemEvent, customTitle: e.target.value })}
+                            />
+                        </InputGroup>
+                    </>
+                ) : (
+                    // Rich Attraction Selector
+                    <>
+                        {!newItemEvent.attractionId ? (
+                            <div className="space-y-3">
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-3 text-gray-400" size={18} />
+                                    <input
+                                        type="text"
+                                        placeholder="Cerca attrazione..."
+                                        className="w-full pl-10 p-3 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:border-black transition-all"
+                                        onChange={(e) => {
+                                            const term = e.target.value.toLowerCase();
+                                            const options = document.querySelectorAll('.attraction-option');
+                                            options.forEach(opt => {
+                                                const name = opt.getAttribute('data-name').toLowerCase();
+                                                opt.style.display = name.includes(term) ? 'flex' : 'none';
+                                            });
+                                        }}
+                                    />
+                                </div>
+                                <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                                    {itinerary.sort((a, b) => a.nome.localeCompare(b.nome)).map(i => (
+                                        <div
+                                            key={i.id}
+                                            data-name={i.nome}
+                                            className="attraction-option flex items-center gap-3 p-2 rounded-xl border border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
+                                            onClick={() => setNewItemEvent({ ...newItemEvent, attractionId: i.id })}
+                                        >
+                                            <div className="w-12 h-12 rounded-lg bg-gray-200 overflow-hidden shrink-0">
+                                                {i.img ? <img src={i.img} alt={i.nome} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-gray-400"><MapPin size={20} /></div>}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="font-bold text-gray-800 text-sm truncate">{i.nome}</div>
+                                                <div className="text-xs text-gray-500 flex items-center gap-2">
+                                                    <span className="bg-gray-100 px-1.5 py-0.5 rounded text-[10px] font-semibold">{i.categoria}</span>
+                                                    <span>{i.durata}</span>
+                                                </div>
+                                            </div>
+                                            <div className="text-blue-600">
+                                                <Plus size={18} />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="relative">
+                                <div className="flex items-center gap-3 p-3 rounded-xl border-2 border-blue-100 bg-blue-50 mb-4">
+                                    {(() => {
+                                        const i = itinerary.find(attr => attr.id === newItemEvent.attractionId);
+                                        return i ? (
+                                            <>
+                                                <div className="w-12 h-12 rounded-lg bg-gray-200 overflow-hidden shrink-0">
+                                                    {i.img ? <img src={i.img} alt={i.nome} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-gray-400"><MapPin size={20} /></div>}
+                                                </div>
+                                                <div className="flex-1">
+                                                    <div className="font-bold text-blue-900 text-sm">{i.nome}</div>
+                                                    <div className="text-xs text-blue-700">{i.durata}</div>
+                                                </div>
+                                                <button onClick={() => setNewItemEvent({ ...newItemEvent, attractionId: "" })} className="p-2 text-blue-400 hover:text-blue-700 hover:bg-blue-100 rounded-full transition-colors">
+                                                    <RefreshCw size={16} />
+                                                </button>
+                                            </>
+                                        ) : null;
+                                    })()}
+                                </div>
+
+                                {/* Smart Scheduling Info */}
+                                {(() => {
+                                    const attr = itinerary.find(i => i.id === newItemEvent.attractionId);
+                                    if (!attr) return null;
+
+                                    const parseTime = (timeStr) => {
+                                        if (!timeStr || timeStr === "//") return null;
+                                        const parts = timeStr.replace('.', ':').split('-');
+                                        if (parts.length < 2) return null;
+                                        const start = parts[0].trim();
+                                        const end = parts[1].trim();
+                                        return { start, end };
+                                    };
+
+                                    const getMinutes = (timeStr) => {
+                                        const [h, m] = timeStr.split(':').map(Number);
+                                        return h * 60 + m;
+                                    };
+
+                                    const hours = parseTime(attr.orari);
+                                    let error = null;
+                                    let warning = null;
+                                    let endTimeDisplay = "";
+
+                                    if (newItemEvent.time && hours) {
+                                        const eventTimeMins = getMinutes(newItemEvent.time);
+                                        const openMins = getMinutes(hours.start);
+                                        const closeMins = getMinutes(hours.end);
+
+                                        if (eventTimeMins < openMins || eventTimeMins > closeMins) {
+                                            error = `Chiuso! Apre alle ${hours.start} e chiude alle ${hours.end}`;
+                                        } else {
+                                            // Calculate End Time
+                                            let durationMins = 0;
+                                            if (attr.durata.includes('ore') || attr.durata.includes('ora')) {
+                                                durationMins += parseFloat(attr.durata) * 60;
+                                            } else if (attr.durata.includes('min')) {
+                                                durationMins += parseInt(attr.durata);
+                                            }
+
+                                            if (durationMins > 0) {
+                                                const endMins = eventTimeMins + durationMins;
+                                                const endH = Math.floor(endMins / 60) % 24;
+                                                const endM = endMins % 60;
+                                                endTimeDisplay = `${endH.toString().padStart(2, '0')}:${endM.toString().padStart(2, '0')}`;
+
+                                                if (endMins > closeMins) {
+                                                    warning = `Attenzione: Finirai alle ${endTimeDisplay}, ma chiude alle ${hours.end}`;
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    return (
+                                        <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm text-sm space-y-2 mb-4">
+                                            <div className="flex justify-between items-center border-b border-gray-50 pb-2">
+                                                <span className="text-gray-400 font-medium text-xs uppercase tracking-wider">Apertura</span>
+                                                <span className="font-bold text-gray-700">{attr.orari}</span>
+                                            </div>
+                                            {attr.eccezioni && (
+                                                <div className="bg-amber-50 text-amber-800 p-2 rounded-lg text-xs flex gap-2 items-start border border-amber-100">
+                                                    <AlertCircle size={14} className="mt-0.5 shrink-0" />
+                                                    <span>{attr.eccezioni}</span>
+                                                </div>
+                                            )}
+
+                                            {error && (
+                                                <div className="bg-red-50 text-red-600 p-2 rounded-lg text-xs font-bold border border-red-100 flex gap-2 items-center animate-pulse">
+                                                    <AlertCircle size={14} /> {error}
+                                                </div>
+                                            )}
+                                            {warning && !error && (
+                                                <div className="bg-orange-50 text-orange-700 p-2 rounded-lg text-xs font-bold border border-orange-100 flex gap-2 items-center">
+                                                    <AlertCircle size={14} /> {warning}
+                                                </div>
+                                            )}
+                                            {!error && !warning && newItemEvent.time && endTimeDisplay && (
+                                                <div className="text-xs text-center text-gray-500 mt-1 bg-gray-50 p-2 rounded-lg">
+                                                    Finirai la visita circa alle <span className="font-bold text-gray-800">{endTimeDisplay}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+                        )}
+                    </>
+                )}
+
+                <div className="grid grid-cols-1 gap-4">
+                    <InputGroup label="Orario Inizio">
+                        <input
+                            type="time"
+                            className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:border-black transition-all font-bold text-lg"
+                            value={newItemEvent.time}
+                            onChange={(e) => setNewItemEvent({ ...newItemEvent, time: e.target.value })}
+                        />
+                    </InputGroup>
+                    <InputGroup label="Note (Opzionale)">
+                        <input
+                            type="text"
+                            placeholder="Es. Ingresso prenotato, dettagli..."
+                            className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:border-black transition-all"
+                            value={newItemEvent.notes}
+                            onChange={(e) => setNewItemEvent({ ...newItemEvent, notes: e.target.value })}
+                        />
+                    </InputGroup>
+                </div>
+
+                <div className="mt-6 pt-4 border-t border-gray-100">
+                    <Button onClick={handleAddEvent} disabled={(() => {
+                        if (!newItemEvent.time) return true;
+                        if (newItemEvent.type === 'custom' && !newItemEvent.customTitle) return true;
+                        if (newItemEvent.type !== 'custom' && !newItemEvent.attractionId) return true;
+
+                        // Validation for attraction closing times
+                        if (newItemEvent.type !== 'custom' && newItemEvent.attractionId) {
+                            const attr = itinerary.find(i => i.id === newItemEvent.attractionId);
+                            if (attr && attr.orari && attr.orari !== "//") {
+                                const parts = attr.orari.replace('.', ':').split('-');
+                                if (parts.length >= 2) {
+                                    const [h, m] = newItemEvent.time.split(':').map(Number);
+                                    const evtMins = h * 60 + m;
+                                    const [openH, openM] = parts[0].trim().split(':').map(Number);
+                                    const [closeH, closeM] = parts[1].trim().split(':').map(Number);
+                                    const openMins = openH * 60 + openM;
+                                    const closeMins = closeH * 60 + closeM;
+                                    if (evtMins < openMins || evtMins > closeMins) return true;
+                                }
+                            }
+                        }
+                        return false;
+                    })()} className="w-full py-4 text-base shadow-lg disabled:opacity-50 disabled:shadow-none disabled:cursor-not-allowed">
+                        Aggiungi all'Itinerario
+                    </Button>
+                </div>
+            </Modal>
+
             {/* Confirmation Modal */}
             <Modal isOpen={confirmModal.isOpen} onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })} title={confirmModal.title}>
-                <div className="text-gray-600 mb-6 font-medium">
-                    {confirmModal.message}
-                </div>
+                <p className="text-gray-600 mb-6">{confirmModal.message}</p>
                 <div className="grid grid-cols-2 gap-3">
                     <Button variant="outline" onClick={() => setConfirmModal({ ...confirmModal, isOpen: false })}>
                         Annulla
@@ -910,21 +1426,25 @@ const App = () => {
             <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-gray-200 md:hidden pb-safe z-40">
                 <div className="flex justify-around p-2">
                     <button onClick={() => setActiveTab("itinerary")} className={`flex flex-col items-center p-2 rounded-xl transition-all ${activeTab === 'itinerary' ? 'text-red-600 bg-red-50' : 'text-gray-400 hover:text-gray-600'}`}>
-                        <MapPin size={22} className="mb-1" />
-                        <span className="text-[10px] font-bold">Itinerario</span>
+                        <Calendar size={20} className="mb-1" />
+                        <span className="text-[10px] font-bold">Giornate</span>
+                    </button>
+                    <button onClick={() => setActiveTab("attractions")} className={`flex flex-col items-center p-2 rounded-xl transition-all ${activeTab === 'attractions' ? 'text-red-600 bg-red-50' : 'text-gray-400 hover:text-gray-600'}`}>
+                        <MapPin size={20} className="mb-1" />
+                        <span className="text-[10px] font-bold">Attrazioni</span>
                     </button>
                     <button onClick={() => setActiveTab("expenses")} className={`flex flex-col items-center p-2 rounded-xl transition-all ${activeTab === 'expenses' ? 'text-red-600 bg-red-50' : 'text-gray-400 hover:text-gray-600'}`}>
-                        <PoundSterling size={22} className="mb-1" />
+                        <PoundSterling size={20} className="mb-1" />
                         <span className="text-[10px] font-bold">Spese</span>
                     </button>
                     <button onClick={() => setActiveTab("transport")} className={`flex flex-col items-center p-2 rounded-xl transition-all ${activeTab === 'transport' ? 'text-red-600 bg-red-50' : 'text-gray-400 hover:text-gray-600'}`}>
-                        <Train size={22} className="mb-1" />
+                        <Train size={20} className="mb-1" />
                         <span className="text-[10px] font-bold">Mezzi</span>
                     </button>
                 </div>
             </div>
 
-        </div>
+        </div >
     );
 };
 
