@@ -13,15 +13,20 @@ const PoundSterling = (props) => (<IconBase {...props}><path d="M18 7c0-5.333-8-
 const CheckCircle = (props) => (<IconBase {...props}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><path d="m9 11 3 3L22 4" /></IconBase>);
 const AlertCircle = (props) => (<IconBase {...props}><circle cx="12" cy="12" r="10" /><line x1="12" x2="12" y1="8" y2="12" /><line x1="12" x2="12.01" y1="16" y2="16" /></IconBase>);
 const Plus = (props) => (<IconBase {...props}><path d="M5 12h14" /><path d="M12 5v14" /></IconBase>);
-const X = (props) => (<IconBase {...props}><path d="M18 6 6 18" /><path d="m6 6 18 12" /></IconBase>);
+const X = (props) => (<IconBase {...props}><path d="M18 6 6 18" /><path d="M6 6 18 18" /></IconBase>);
 const Database = (props) => (<IconBase {...props}><ellipse cx="12" cy="5" rx="9" ry="3" /><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" /><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" /></IconBase>);
 const RefreshCw = (props) => (<IconBase {...props}><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /><path d="M3 21v-5h5" /></IconBase>);
 const Edit = (props) => (<IconBase {...props}><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" /></IconBase>);
 const Trash = (props) => (<IconBase {...props}><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></IconBase>);
+const User = (props) => (<IconBase {...props}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></IconBase>);
 const Smartphone = (props) => (<IconBase {...props}><rect width="14" height="20" x="5" y="2" rx="2" ry="2" /><path d="M12 18h.01" /></IconBase>);
 const Search = (props) => (<IconBase {...props}><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></IconBase>);
+const Minus = (props) => (<IconBase {...props}><path d="M5 12h14" /></IconBase>);
 const Calendar = (props) => (<IconBase {...props}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></IconBase>);
 const Clock = (props) => (<IconBase {...props}><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></IconBase>);
+const Check = (props) => (<IconBase {...props}><polyline points="20 6 9 17 4 12" /></IconBase>);
+const ArrowDown = (props) => (<IconBase {...props}><path d="M12 5v14" /><path d="m19 12-7 7-7-7" /></IconBase>);
+const Backpack = (props) => (<IconBase {...props}><path d="M4 10a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z" /><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" /><path d="M8 21v-5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v5" /><path d="M8 10h8" /><path d="M9 14h6" /></IconBase>);
 
 // --- DATI INIZIALI (SEED DATA) ---
 const seedItinerary = [
@@ -64,6 +69,73 @@ const seedItinerary = [
 
 const seedTransport = [
     { partenza: "London Gatwick (LGW)", arrivo: "NOX Kensington", dettaglio: "Southern Train", data: "25/02/2026", ora: "19:15", costo: "£ 33.00", pagato: false, prenotato: false }
+];
+
+const seedBackpack = [
+    // --- ANDREA INARDI ---
+    { item: "Passaporto", categoria: "Documenti", packed: false, qty: 1, outside: false, owner: "Andrea Inardi", collocazione: "Tasca piccola" },
+    { item: "Prenotazioni Voli/Hotel", categoria: "Documenti", packed: false, qty: 1, outside: false, owner: "Andrea Inardi", collocazione: "Zaino grande" },
+    { item: "Adattatore UK", categoria: "Elettronica", packed: false, qty: 1, outside: false, owner: "Andrea Inardi", collocazione: "Tasca Tech" },
+    { item: "Spazzolino e Dentifricio", categoria: "Toiletries", packed: false, qty: 1, outside: false, owner: "Andrea Inardi", collocazione: "Beauty Case" },
+
+    // --- ELENA CAFASSO (From List) ---
+    { item: "Termica bianca", categoria: "Maglietta", packed: false, qty: 1, outside: true, owner: "Elena Cafasso", collocazione: "Tasca centrale" },
+    { item: "Collant termici marroncini", categoria: "Pantalone", packed: false, qty: 1, outside: true, owner: "Elena Cafasso", collocazione: "Tasca centrale" },
+    { item: "Jeans con riga in mezzo", categoria: "Pantalone", packed: false, qty: 1, outside: true, owner: "Elena Cafasso", collocazione: "Tasca centrale" },
+    { item: "Maglietta bianca con maniche nere", categoria: "Maglietta", packed: false, qty: 1, outside: true, owner: "Elena Cafasso", collocazione: "Tasca centrale" },
+    { item: "Maglioncino rosa", categoria: "Maglietta", packed: false, qty: 1, outside: true, owner: "Elena Cafasso", collocazione: "Tasca centrale" },
+    { item: "Pantalone comodo", categoria: "Pantalone", packed: false, qty: 1, outside: true, owner: "Elena Cafasso", collocazione: "Tasca centrale" },
+    { item: "Mutande", categoria: "Intimo", packed: false, qty: 6, outside: true, owner: "Elena Cafasso", collocazione: "Tasca centrale" },
+    { item: "Reggiseno bianco e nero", categoria: "Intimo", packed: false, qty: 1, outside: true, owner: "Elena Cafasso", collocazione: "Tasca centrale" },
+    { item: "Canottiera grigia spessa", categoria: "Intimo", packed: false, qty: 1, outside: true, owner: "Elena Cafasso", collocazione: "Tasca centrale" },
+    { item: "Carte UNO", categoria: "Svago", packed: false, qty: 1, outside: true, owner: "Elena Cafasso", collocazione: "Tasca laterale" },
+    { item: "Carte normali", categoria: "Svago", packed: false, qty: 1, outside: true, owner: "Elena Cafasso", collocazione: "Tasca laterale" },
+    { item: "Ombrello", categoria: "Necessità", packed: false, qty: 1, outside: false, owner: "Elena Cafasso", collocazione: "Tasca laterale" },
+    { item: "Maglietta marina", categoria: "Pigiama", packed: false, qty: 1, outside: true, owner: "Elena Cafasso", collocazione: "Tasca centrale" },
+    { item: "Pantalone con i cuoricini", categoria: "Pigiama", packed: false, qty: 1, outside: true, owner: "Elena Cafasso", collocazione: "Tasca centrale" },
+    { item: "Calze", categoria: "Intimo", packed: false, qty: 5, outside: true, owner: "Elena Cafasso", collocazione: "Tasca centrale" },
+    { item: "Calze antiscivolo", categoria: "Intimo", packed: false, qty: 1, outside: true, owner: "Elena Cafasso", collocazione: "Tasca centrale" },
+    { item: "Powerbank", categoria: "Elettronica", packed: false, qty: 1, outside: false, owner: "Elena Cafasso", collocazione: "Borsa" },
+    { item: "Cuffiette", categoria: "Elettronica", packed: false, qty: 1, outside: false, owner: "Elena Cafasso", collocazione: "Borsa" },
+    { item: "Letterina", categoria: "Svago", packed: false, qty: 1, outside: true, owner: "Elena Cafasso", collocazione: "Borsa" },
+    { item: "Specchietto", categoria: "Necessità", packed: false, qty: 1, outside: false, owner: "Elena Cafasso", collocazione: "Borsa" },
+    { item: "Assorbenti", categoria: "Necessità", packed: false, qty: 5, outside: false, owner: "Elena Cafasso", collocazione: "Borsa" },
+    { item: "Tampax", categoria: "Necessità", packed: false, qty: 7, outside: false, owner: "Elena Cafasso", collocazione: "Sacchetto bianco" },
+    { item: "Spazzolino", categoria: "Necessità", packed: false, qty: 1, outside: false, owner: "Elena Cafasso", collocazione: "Sacchetto bianco" },
+    { item: "Spugnetta x trucco", categoria: "Necessità", packed: false, qty: 1, outside: false, owner: "Elena Cafasso", collocazione: "Sacchetto bianco" },
+    { item: "Aspirina", categoria: "Necessità", packed: false, qty: 1, outside: false, owner: "Elena Cafasso", collocazione: "Sacchetto bianco" },
+    { item: "OKI", categoria: "Necessità", packed: false, qty: 4, outside: false, owner: "Elena Cafasso", collocazione: "Sacchetto bianco" },
+    { item: "Paxabel", categoria: "Necessità", packed: false, qty: 2, outside: false, owner: "Elena Cafasso", collocazione: "Sacchetto bianco" },
+    { item: "Fazzoletti", categoria: "Necessità", packed: false, qty: 1, outside: false, owner: "Elena Cafasso", collocazione: "Sacchetto bianco" },
+    { item: "Salviette intime", categoria: "Necessità", packed: false, qty: 1, outside: false, owner: "Elena Cafasso", collocazione: "Sacchetto bianco" },
+    { item: "Fazzoletti (pacchetti)", categoria: "Necessità", packed: false, qty: 2, outside: false, owner: "Elena Cafasso", collocazione: "Tasca piccola" },
+    { item: "Borsa", categoria: "Svago", packed: false, qty: 1, outside: false, owner: "Elena Cafasso", collocazione: "Tasca piccola" },
+    { item: "Occhiali da sole", categoria: "Necessità", packed: false, qty: 1, outside: true, owner: "Elena Cafasso", collocazione: "Tasca piccola" },
+    { item: "Sacchetto bianco", categoria: "Necessità", packed: false, qty: 1, outside: false, owner: "Elena Cafasso", collocazione: "Tasca grande interna" },
+    { item: "Intimo rosso", categoria: "Intimo", packed: false, qty: 1, outside: true, owner: "Elena Cafasso", collocazione: "Tasca centrale" },
+    { item: "Caricatore cellulare", categoria: "Elettronica", packed: false, qty: 1, outside: true, owner: "Elena Cafasso", collocazione: "" },
+    { item: "Caricatore powerbank", categoria: "Elettronica", packed: false, qty: 1, outside: true, owner: "Elena Cafasso", collocazione: "" },
+    { item: "Vestitino nero", categoria: "Elegante", packed: false, qty: 1, outside: true, owner: "Elena Cafasso", collocazione: "" },
+    { item: "Collant neri 20 den", categoria: "Elegante", packed: false, qty: 1, outside: true, owner: "Elena Cafasso", collocazione: "" },
+    { item: "Dentifricio", categoria: "Liquido", packed: false, qty: 1, outside: true, ml: 50, owner: "Elena Cafasso", collocazione: "Busta trasparente" },
+    { item: "Mascara", categoria: "Liquido", packed: false, qty: 1, outside: false, ml: 11, owner: "Elena Cafasso", collocazione: "Busta trasparente" },
+    { item: "Matita per labbra", categoria: "Liquido", packed: false, qty: 1, outside: false, ml: 1.4, owner: "Elena Cafasso", collocazione: "Busta trasparente" },
+    { item: "Rossetto", categoria: "Liquido", packed: false, qty: 1, outside: false, ml: 8, owner: "Elena Cafasso", collocazione: "Busta trasparente" },
+    { item: "Lucidalabbra", categoria: "Liquido", packed: false, qty: 1, outside: false, ml: 12, owner: "Elena Cafasso", collocazione: "Busta trasparente" },
+    { item: "Profumo", categoria: "Liquido", packed: false, qty: 1, outside: false, ml: 10.2, owner: "Elena Cafasso", collocazione: "Busta trasparente" },
+    { item: "Amuchina", categoria: "Liquido", packed: false, qty: 1, outside: false, ml: 30, owner: "Elena Cafasso", collocazione: "Busta trasparente" },
+    { item: "Felpa comoda", categoria: "Maglietta", packed: false, qty: 1, outside: true, owner: "Elena Cafasso", collocazione: "Tasca centrale" },
+    { item: "Fondotinta", categoria: "Liquido", packed: false, qty: 1, outside: false, ml: 8, owner: "Elena Cafasso", collocazione: "Busta trasparente" },
+    { item: "Correttore", categoria: "Liquido", packed: false, qty: 1, outside: false, ml: 10, owner: "Elena Cafasso", collocazione: "Busta trasparente" },
+    { item: "Matita per sopracciglia", categoria: "Liquido", packed: false, qty: 1, outside: false, ml: 1.5, owner: "Elena Cafasso", collocazione: "Busta trasparente" },
+    { item: "Bagnoschiuma", categoria: "Liquido", packed: false, qty: 1, outside: false, ml: 30, owner: "Elena Cafasso", collocazione: "Busta trasparente" },
+    { item: "Crema per brufoli", categoria: "Liquido", packed: false, qty: 1, outside: false, ml: 5, owner: "Elena Cafasso", collocazione: "Busta trasparente" },
+    { item: "Crema detergente", categoria: "Liquido", packed: false, qty: 1, outside: true, ml: 50, owner: "Elena Cafasso", collocazione: "Busta trasparente" },
+    { item: "Shampoo", categoria: "Liquido", packed: false, qty: 1, outside: false, ml: 30, owner: "Elena Cafasso", collocazione: "Busta trasparente" },
+    { item: "K-Way", categoria: "Necessità", packed: false, qty: 1, outside: true, owner: "Elena Cafasso", collocazione: "" },
+    { item: "Chiavetta USB", categoria: "Elettronica", packed: false, qty: 1, outside: true, owner: "Elena Cafasso", collocazione: "" },
+    { item: "Deodorante Wild", categoria: "Necessità", packed: false, qty: 1, outside: true, owner: "Elena Cafasso", collocazione: "Tasca grande interna" },
+    { item: "Busta trasparente", categoria: "Necessità", packed: false, qty: 1, outside: true, owner: "Elena Cafasso", collocazione: "" },
 ];
 
 const seedExpenses = [
@@ -111,9 +183,21 @@ const Badge = ({ children, type }) => {
     if (type === "Mercato") classes = "bg-orange-100 text-orange-700";
     if (type === "Parco") classes = "bg-green-100 text-green-700";
     if (type === "Grattacielo") classes = "bg-purple-100 text-purple-700";
-    if (type === "Ristorante") classes = "bg-amber-100 text-amber-700"; // NEW
-    if (type === "Piazza") classes = "bg-slate-200 text-slate-700"; // NEW
-    if (type === "Tempo libero") classes = "bg-pink-100 text-pink-700"; // NEW
+    if (type === "Ristorante") classes = "bg-amber-100 text-amber-700";
+    if (type === "Piazza") classes = "bg-slate-200 text-slate-700";
+    if (type === "Tempo libero") classes = "bg-pink-100 text-pink-700";
+
+    // Backpack Categories
+    if (type === "Liquido") classes = "bg-red-100 text-red-700";
+    if (type === "Maglietta") classes = "bg-purple-100 text-purple-700";
+    if (type === "Pantalone") classes = "bg-blue-600 text-white"; /* Stronger blue */
+    if (type === "Intimo") classes = "bg-green-100 text-green-700 transition-colors";
+    if (type === "Elettronica") classes = "bg-lime-100 text-lime-700";
+    if (type === "Svago") classes = "bg-purple-200 text-purple-800";
+    if (type === "Necessità") classes = "bg-teal-100 text-teal-700";
+    if (type === "Pigiama") classes = "bg-yellow-900/20 text-yellow-900"; // Brown-ish
+    if (type === "Elegante") classes = "bg-yellow-100 text-yellow-700";
+
     if (type === "Saldato") classes = "bg-green-100 text-green-700";
     if (type === "Da saldare") classes = "bg-red-100 text-red-700";
     if (type === "Gratis") classes = "bg-teal-100 text-teal-700";
@@ -148,8 +232,8 @@ const Modal = ({ isOpen, onClose, title, children }) => {
             <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden scale-100 animate-[scale-in_0.15s_ease-out]">
                 <div className="px-4 py-3 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
                     <h3 className="font-bold text-gray-800">{title}</h3>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors">
-                        <X size={20} />
+                    <button onClick={onClose} className="bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-700 p-2 rounded-full transition-all shadow-sm">
+                        <X size={18} />
                     </button>
                 </div>
                 <div className="p-4 max-h-[75vh] overflow-y-auto">
@@ -173,6 +257,7 @@ const App = () => {
     const [days, setDays] = useState([]); // NEW: Days state
     const [transport, setTransport] = useState([]);
     const [expenses, setExpenses] = useState([]);
+    const [backpack, setBackpack] = useState([]); // NEW: Backpack state
     const [isLoading, setIsLoading] = useState(true);
 
     // Modal States
@@ -186,6 +271,10 @@ const App = () => {
     const [newItemEvent, setNewItemEvent] = useState({ type: 'attraction', attractionId: "", customTitle: "", time: "", notes: "" });
     const [newItemTransport, setNewItemTransport] = useState({ dettaglio: "", partenza: "", arrivo: "", data: "", ora: "", costo: "", pagato: false, prenotato: false });
     const [newItemExpense, setNewItemExpense] = useState({ item: "", costo: "", valuta: "£", pagato: false, prenotato: false, chi: "", note: "" });
+    const [newItemBackpack, setNewItemBackpack] = useState({ item: "", categoria: "Altro", packed: false, qty: 1, outside: false, ml: "", owner: "Andrea Inardi", collocazione: "" });
+    const [backpackOwnerFilter, setBackpackOwnerFilter] = useState("Andrea Inardi");
+    const [backpackFilterLocation, setBackpackFilterLocation] = useState("Tutti"); // Tutti, Dentro, Fuori
+    const [backpackFilterPlacement, setBackpackFilterPlacement] = useState("Tutti"); // Dynamic based on items
 
     // Editing State
     const [editingId, setEditingId] = useState(null);
@@ -248,11 +337,17 @@ const App = () => {
             setDays(data);
         });
 
+        const unsubBackpack = db.collection("backpack").onSnapshot(snapshot => {
+            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setBackpack(data);
+        });
+
         return () => {
             unsubItinerary();
             unsubTransport();
             unsubExpenses();
             unsubDays();
+            unsubBackpack();
         };
     }, []);
 
@@ -514,6 +609,71 @@ const App = () => {
         await dayRef.update({ events: updatedEvents });
     };
 
+    // --- BACKPACK HANDLERS ---
+    const handleAddBackpackItem = async () => {
+        if (!newItemBackpack.item) return;
+
+        await db.collection("backpack").add({
+            ...newItemBackpack,
+            qty: Number(newItemBackpack.qty) || 1,
+            ml: newItemBackpack.categoria === 'Liquido' ? (Number(newItemBackpack.ml) || 0) : 0,
+            outside: newItemBackpack.outside || false,
+            owner: newItemBackpack.owner,
+            collocazione: newItemBackpack.collocazione || "",
+            packed: false
+        });
+
+        setNewItemBackpack({ item: "", categoria: newItemBackpack.categoria, packed: false, qty: 1, outside: false, ml: "", owner: backpackOwnerFilter, collocazione: "" }); // Keep last category & current filter owner
+        // Don't close modal to allow rapid entry if desired, or maybe we do? Let's keep it open for now or add a "Salva e aggiungi altro" button? 
+        // For simplicity, let's behave like others or just clear input.
+        // If we want to strictly follow others pattern, we might want to close. 
+        // But for a list, adding multiple things is common. 
+        // Let's NOT close the modal, just clear the name.
+        document.getElementById('backpack-input')?.focus();
+    };
+
+    const handleDeleteBackpackItem = async (id) => {
+        await db.collection("backpack").doc(id).delete();
+    };
+
+    const togglePacked = (id, currentStatus) => {
+        // Optimistic
+        const newPacked = !currentStatus;
+        const newOutside = !newPacked; // If Packed (True) -> Inside (Outside=False). If Unpacked (False) -> Outside (Outside=True).
+
+        setBackpack(prev => prev.map(i => i.id === id ? { ...i, packed: newPacked, outside: newOutside } : i));
+        db.collection("backpack").doc(id).update({ packed: newPacked, outside: newOutside });
+    };
+
+    const updateBackpackQty = (id, currentQty, delta) => {
+        const newQty = Math.max(1, currentQty + delta);
+        setBackpack(prev => prev.map(i => i.id === id ? { ...i, qty: newQty } : i));
+        db.collection("backpack").doc(id).update({ qty: newQty });
+    };
+
+    const handleReloadBackpackOnly = async () => {
+        requestConfirm("Ricarica Zaino", "Vuoi cancellare TUTTI gli oggetti dello zaino e ricaricare quelli predefiniti (Andrea + Elena)?", async () => {
+            const batch = db.batch();
+
+            // 1. Delete all current backpack docs
+            // Note: In client SDK deleting collection is hard, so we just delete what we have in state or specific query.
+            // For safety/speed in this small app, we iterate snapshot.
+            const snapshot = await db.collection("backpack").get();
+            snapshot.docs.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+
+            // 2. Add seed data
+            seedBackpack.forEach(item => {
+                const docRef = db.collection("backpack").doc();
+                batch.set(docRef, item);
+            });
+
+            await batch.commit();
+            alert("Zaino ricaricato!");
+        });
+    };
+
     const handleInitializeData = async () => {
         requestConfirm("Reset Dati", "ATTENZIONE: Questo cancellerà tutti i dati e li ripristinerà a quelli di default. Questa azione è irreversibile. Procedere?", async () => {
             const batch = db.batch();
@@ -535,6 +695,10 @@ const App = () => {
             });
             seedDays.forEach(item => {
                 const docRef = db.collection("days").doc();
+                batch.set(docRef, item);
+            });
+            seedBackpack.forEach(item => {
+                const docRef = db.collection("backpack").doc();
                 batch.set(docRef, item);
             });
 
@@ -612,6 +776,12 @@ const App = () => {
                         className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${activeTab === 'transport' ? 'bg-red-50 text-red-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
                     >
                         Mezzi
+                    </button>
+                    <button
+                        onClick={() => setActiveTab("backpack")}
+                        className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${activeTab === 'backpack' ? 'bg-red-50 text-red-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                    >
+                        Zaino
                     </button>
                 </div>
             </div>
@@ -1009,6 +1179,194 @@ const App = () => {
                     </div>
                 )}
 
+                {/* BACKPACK TAB */}
+                {activeTab === "backpack" && (
+                    <div className="space-y-6">
+
+                        {/* Owner Switcher */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 mb-4 space-y-3">
+                            {/* Row 1: Filters (Owner + Location) */}
+                            <div className="flex flex-col gap-2">
+                                <div className="flex gap-2 text-sm">
+                                    <div className="flex-1 flex bg-gray-50 p-1 rounded-lg">
+                                        {["Andrea Inardi", "Elena Cafasso"].map(owner => (
+                                            <button
+                                                key={owner}
+                                                onClick={() => { setBackpackOwnerFilter(owner); setBackpackFilterPlacement("Tutti"); }}
+                                                className={`flex-1 py-1.5 rounded-md font-bold transition-all flex items-center justify-center gap-1 text-xs ${backpackOwnerFilter === owner ? 'bg-white text-black shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                                            >
+                                                <User size={12} /> {owner.split(' ')[0]}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div className="flex-[0.8] flex bg-gray-50 p-1 rounded-lg">
+                                        {["Tutti", "Dentro", "Fuori"].map(loc => (
+                                            <button
+                                                key={loc}
+                                                onClick={() => setBackpackFilterLocation(loc)}
+                                                className={`flex-1 py-1.5 rounded-md font-bold transition-all text-xs ${backpackFilterLocation === loc ? 'bg-white text-black shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                                            >
+                                                {loc}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Row 2: Placement Scroll (Dynamic) */}
+                                {(() => {
+                                    const uniquePlacements = [...new Set(backpack.filter(i => i.owner === backpackOwnerFilter && i.collocazione).map(i => i.collocazione))].sort();
+                                    const placements = ["Tutti", ...uniquePlacements];
+
+                                    if (uniquePlacements.length > 0) {
+                                        return (
+                                            <div className="flex gap-2 overflow-x-auto no-scrollbar pt-1 border-t border-gray-50">
+                                                {placements.map(place => (
+                                                    <button
+                                                        key={place}
+                                                        onClick={() => setBackpackFilterPlacement(place)}
+                                                        className={`px-2.5 py-1 rounded-full text-[10px] font-bold whitespace-nowrap border transition-colors flex items-center gap-1 ${backpackFilterPlacement === place ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'}`}
+                                                    >
+                                                        <MapPin size={10} /> {place}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        );
+                                    }
+                                })()}
+                            </div>
+
+                            {/* Row 3: Compact Stats */}
+                            <div className="pt-2 border-t border-gray-50">
+                                <div className="flex justify-between items-end mb-1.5">
+                                    <div className="flex items-center gap-2">
+                                        <Backpack size={18} className="text-gray-300" />
+                                        <div className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+                                            {backpack.filter(i => i.owner === backpackOwnerFilter && i.packed).length}/{backpack.filter(i => i.owner === backpackOwnerFilter).length} OGGETTI
+                                        </div>
+                                        {(() => {
+                                            const currentBackpack = backpack.filter(i => i.owner === backpackOwnerFilter);
+                                            const totalLiquids = currentBackpack
+                                                .filter(i => i.categoria === 'Liquido')
+                                                .reduce((acc, curr) => acc + ((Number(curr.ml) || 0) * (Number(curr.qty) || 1)), 0);
+
+                                            if (totalLiquids > 0) {
+                                                return (
+                                                    <div className={`text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 ${totalLiquids > 1000 ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-500'}`}>
+                                                        💧 {totalLiquids}ml {totalLiquids > 1000 && '!'}
+                                                    </div>
+                                                );
+                                            }
+                                        })()}
+                                    </div>
+                                    <div className="text-[10px] font-bold text-gray-400">
+                                        {backpack.filter(i => i.owner === backpackOwnerFilter).length > 0 ? Math.round((backpack.filter(i => i.owner === backpackOwnerFilter && i.packed).length / backpack.filter(i => i.owner === backpackOwnerFilter).length) * 100) : 0}%
+                                    </div>
+                                </div>
+                                <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                                    <div
+                                        className="bg-black h-1.5 rounded-full transition-all duration-500 ease-out"
+                                        style={{ width: `${backpack.filter(i => i.owner === backpackOwnerFilter).length > 0 ? (backpack.filter(i => i.owner === backpackOwnerFilter && i.packed).length / backpack.filter(i => i.owner === backpackOwnerFilter).length) * 100 : 0}%` }}
+                                    ></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <Button variant="outline" onClick={() => { setNewItemBackpack(prev => ({ ...prev, owner: backpackOwnerFilter })); setActiveModal('backpack'); }} icon={Plus}>
+                            Aggiungi a {backpackOwnerFilter.split(' ')[0]}
+                        </Button>
+
+                        <div className="space-y-6">
+                            {(() => {
+                                let filteredBackpack = backpack.filter(i => i.owner === backpackOwnerFilter);
+
+                                // Apply Location Filter
+                                if (backpackFilterLocation === "Dentro") filteredBackpack = filteredBackpack.filter(i => !i.outside);
+                                if (backpackFilterLocation === "Fuori") filteredBackpack = filteredBackpack.filter(i => i.outside);
+
+                                // Apply Placement Filter
+                                if (backpackFilterPlacement !== "Tutti") filteredBackpack = filteredBackpack.filter(i => i.collocazione === backpackFilterPlacement);
+
+                                const activeCategories = [...new Set([...filteredBackpack.map(i => i.categoria), "Liquido", "Maglietta", "Pantalone", "Intimo", "Elettronica", "Svago", "Necessità", "Pigiama", "Elegante"])]
+                                    .filter(cat => filteredBackpack.some(i => i.categoria === cat))
+                                    .sort();
+
+                                if (filteredBackpack.length === 0 && backpack.filter(i => i.owner === backpackOwnerFilter).length > 0) {
+                                    return (
+                                        <div className="text-center py-10 opacity-50">
+                                            <Search size={48} className="mx-auto mb-2 text-gray-300" />
+                                            <p className="text-gray-400 text-sm">Nessun oggetto trovato con questi filtri</p>
+                                        </div>
+                                    );
+                                }
+
+                                return activeCategories.map(cat => (
+                                    <div key={cat}>
+                                        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-2 ml-1 flex items-center gap-2">
+                                            <Badge type={cat}>{cat}</Badge>
+                                        </h3>
+                                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 divide-y divide-gray-50 overflow-hidden">
+                                            {filteredBackpack.filter(i => i.categoria === cat).map(item => (
+                                                <div key={item.id} className={`p-4 flex items-center gap-3 transition-colors group ${item.packed ? 'bg-green-50/30' : 'hover:bg-gray-50'}`}>
+
+                                                    {/* Qty Controls (Moved to Start) */}
+                                                    <div className="flex flex-col items-center gap-0.5 bg-gray-50 rounded-lg p-0.5 border border-gray-100 min-w-[24px]">
+                                                        <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateBackpackQty(item.id, item.qty || 1, 1) }} className="p-0.5 hover:bg-gray-200 rounded text-gray-500 font-bold leading-none"><Plus size={10} /></button>
+                                                        <span className="text-xs font-bold text-gray-700 text-center select-none">{item.qty || 1}</span>
+                                                        <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateBackpackQty(item.id, item.qty || 1, -1) }} className="p-0.5 hover:bg-gray-200 rounded text-gray-500 font-bold leading-none"><Minus size={10} /></button>
+                                                    </div>
+
+                                                    {/* Content */}
+                                                    <div className="flex-1 min-w-0" onClick={() => togglePacked(item.id, item.packed)}>
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <span className={`font-medium text-sm transition-all truncate ${item.packed ? 'text-gray-400 line-through decoration-gray-300' : 'text-gray-800'}`}>
+                                                                {item.item}
+                                                            </span>
+                                                            {item.ml > 0 && <span className="text-[10px] font-bold text-blue-500 bg-blue-50 px-1 rounded">{item.ml}ml</span>}
+
+                                                            {/* Location Status Tag (Linked to Button) */}
+                                                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border whitespace-nowrap transition-colors ${item.packed ? 'bg-green-50 text-green-600 border-green-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
+                                                                {item.packed ? "DENTRO" : "FUORI"}
+                                                            </span>
+                                                        </div>
+                                                        {item.collocazione && (
+                                                            <div className="text-[10px] text-gray-400 font-semibold mt-0.5 flex items-center gap-1">
+                                                                <MapPin size={10} /> {item.collocazione}
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Actions */}
+                                                    <div className="flex items-center gap-1">
+                                                        {/* Toggle Packed (Backpack Icon) */}
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); togglePacked(item.id, item.packed); }}
+                                                            className={`p-2.5 rounded-full transition-all duration-200 ${item.packed ? 'bg-amber-50 text-amber-500 shadow-sm border border-amber-100' : 'bg-transparent text-gray-300 hover:text-gray-500 hover:bg-gray-50'}`}
+                                                            title={item.packed ? "Rimuovi dallo zaino" : "Metti nello zaino"}
+                                                        >
+                                                            <Backpack size={20} strokeWidth={item.packed ? 2.5 : 2} />
+                                                        </button>
+
+                                                        <button onClick={(e) => { e.stopPropagation(); handleDeleteBackpackItem(item.id); }} className="text-gray-300 hover:text-red-500 p-2 rounded-full transition-colors">
+                                                            <Trash size={16} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ));
+                            })()}
+
+                            {backpack.filter(i => i.owner === backpackOwnerFilter).length === 0 && (
+                                <div className="text-center py-10 opacity-50">
+                                    <Backpack size={48} className="mx-auto mb-2 text-gray-300" />
+                                    <p className="text-gray-400 text-sm">Zaino vuoto</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
             </div>
 
             {/* MODALS */}
@@ -1366,6 +1724,87 @@ const App = () => {
                 </div>
             </Modal>
 
+            {/* Add Backpack Item Modal */}
+            <Modal isOpen={activeModal === 'backpack'} onClose={() => setActiveModal(null)} title="Nuovo Oggetto">
+                <InputGroup label="Nome Oggetto">
+                    <input
+                        id="backpack-input"
+                        type="text"
+                        placeholder="Es. Caricabatterie..."
+                        className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:border-black transition-all"
+                        value={newItemBackpack.item}
+                        onChange={(e) => setNewItemBackpack({ ...newItemBackpack, item: e.target.value })}
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleAddBackpackItem() }}
+                    />
+                </InputGroup>
+                <div className="grid grid-cols-2 gap-3 mb-2">
+                    <InputGroup label="Quantità">
+                        <input
+                            type="number"
+                            min="1"
+                            placeholder="1"
+                            className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:border-black transition-all"
+                            value={newItemBackpack.qty}
+                            onChange={(e) => setNewItemBackpack({ ...newItemBackpack, qty: e.target.value })}
+                        />
+                    </InputGroup>
+                    <InputGroup label="Categoria">
+                        <select
+                            className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:border-black transition-all"
+                            value={newItemBackpack.categoria}
+                            onChange={(e) => setNewItemBackpack({ ...newItemBackpack, categoria: e.target.value })}
+                        >
+                            {["Liquido", "Maglietta", "Pantalone", "Intimo", "Elettronica", "Svago", "Necessità", "Pigiama", "Elegante", "Altro"].map(c => (
+                                <option key={c} value={c}>{c}</option>
+                            ))}
+                        </select>
+                    </InputGroup>
+                </div>
+
+                {newItemBackpack.categoria === 'Liquido' && (
+                    <InputGroup label="Millilitri (ml)">
+                        <input
+                            type="number"
+                            placeholder="Es. 100"
+                            className="w-full p-3 bg-blue-50 rounded-xl border border-blue-200 outline-none focus:border-blue-500 transition-all font-bold text-blue-900"
+                            value={newItemBackpack.ml}
+                            onChange={(e) => setNewItemBackpack({ ...newItemBackpack, ml: e.target.value })}
+                        />
+                    </InputGroup>
+                )}
+
+                <InputGroup label="Proprietario">
+                    <select
+                        className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:border-black transition-all"
+                        value={newItemBackpack.owner}
+                        onChange={(e) => setNewItemBackpack({ ...newItemBackpack, owner: e.target.value })}
+                    >
+                        <option value="Andrea Inardi">Andrea Inardi</option>
+                        <option value="Elena Cafasso">Elena Cafasso</option>
+                    </select>
+                </InputGroup>
+
+                <InputGroup label="Collocazione (Opzionale)">
+                    <input
+                        type="text"
+                        placeholder="Es. Tasca davanti, Borsa..."
+                        className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:border-black transition-all"
+                        value={newItemBackpack.collocazione}
+                        onChange={(e) => setNewItemBackpack({ ...newItemBackpack, collocazione: e.target.value })}
+                    />
+                </InputGroup>
+
+                <div className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer p-3 hover:bg-gray-50 rounded-lg border border-gray-200 transition-all" onClick={() => setNewItemBackpack({ ...newItemBackpack, outside: !newItemBackpack.outside })}>
+                    <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${newItemBackpack.outside ? 'bg-amber-500 border-amber-500 text-white' : 'border-gray-300'}`}>
+                        {newItemBackpack.outside && <CheckCircle size={12} />}
+                    </div>
+                    <span>Fuori dallo zaino</span>
+                </div>
+                <Button onClick={handleAddBackpackItem} className="mt-4">
+                    Aggiungi
+                </Button>
+            </Modal>
+
             {/* Confirmation Modal */}
             <Modal isOpen={confirmModal.isOpen} onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })} title={confirmModal.title}>
                 <p className="text-gray-600 mb-6">{confirmModal.message}</p>
@@ -1440,6 +1879,10 @@ const App = () => {
                     <button onClick={() => setActiveTab("transport")} className={`flex flex-col items-center p-2 rounded-xl transition-all ${activeTab === 'transport' ? 'text-red-600 bg-red-50' : 'text-gray-400 hover:text-gray-600'}`}>
                         <Train size={20} className="mb-1" />
                         <span className="text-[10px] font-bold">Mezzi</span>
+                    </button>
+                    <button onClick={() => setActiveTab("backpack")} className={`flex flex-col items-center p-2 rounded-xl transition-all ${activeTab === 'backpack' ? 'text-red-600 bg-red-50' : 'text-gray-400 hover:text-gray-600'}`}>
+                        <Backpack size={20} className="mb-1" />
+                        <span className="text-[10px] font-bold">Zaino</span>
                     </button>
                 </div>
             </div>
