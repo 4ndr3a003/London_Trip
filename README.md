@@ -20,6 +20,15 @@ Una Web App (PWA) moderna e collaborativa progettata per organizzare e gestire u
 *   sezione dedicata per voli, treni e spostamenti interni.
 *   Dettagli su orari, costi e stato prenotazione.
 
+### 🎒 Zaino & Organizzazione
+*   **Gestione Bagagli Multi-Utente:** Liste personalizzate per ogni viaggiatore (es. Andrea, Elena).
+*   **Stato "Dentro/Fuori":** Traccia cosa è stato già impacchettato e cosa manca.
+    *   **Tasto Smart:** Un clic sull'icona zaino per mettere/togliere l'oggetto.
+    *   **Badge Visivo:** Tag colorati ("DENTRO" verde, "FUORI" giallo) per verifica immediata.
+*   **Gestione Liquidi:** Calcolo automatico dei ml totali con avvisi se si supera il limite di 1000ml.
+*   **Categorie e Posizione:** Organizzazione per categoria (Abbigliamento, Igiene, ecc.) e indicazione precisa della tasca o contenitore.
+*   **Modalità Compatta:** Interfaccia ottimizzata per visualizzare rapidamente statistiche e oggetti mancanti.
+
 ### 📱 Esperienza Utente (UX)
 *   **Progressive Web App (PWA):** Installabile su smartphone come un'app nativa.
 *   **Design Responsive:** Interfaccia ottimizzata per mobile, costruita con Tailwind CSS.
