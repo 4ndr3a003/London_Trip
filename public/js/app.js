@@ -251,19 +251,43 @@ const InputGroup = ({ label, children }) => (
     </div>
 );
 
-const App = () => {
+const TripDashboard = ({ tripId, onBack }) => {
     const [activeTab, setActiveTab] = useState("itinerary");
     const [itinerary, setItinerary] = useState([]);
     const [days, setDays] = useState([]); // NEW: Days state
     const [transport, setTransport] = useState([]);
     const [expenses, setExpenses] = useState([]);
     const [backpack, setBackpack] = useState([]); // NEW: Backpack state
+    const [tripDetails, setTripDetails] = useState({ title: "Londra 2026", dates: "25 Feb - 02 Mar", flag: "🇬🇧", color: "#000000" });
     const [isLoading, setIsLoading] = useState(true);
 
     // Modal States
     const [activeModal, setActiveModal] = useState(null);
     const [viewingItem, setViewingItem] = useState(null);
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: "", message: "", onConfirm: null });
+
+    // Colors Palette
+    const colors = [
+        { hex: "#000000", name: "Nero" },
+        { hex: "#dc2626", name: "Rosso" },
+        { hex: "#2563eb", name: "Blu" },
+        { hex: "#16a34a", name: "Verde" },
+        { hex: "#d97706", name: "Arancione" },
+        { hex: "#9333ea", name: "Viola" },
+        { hex: "#db2777", name: "Rosa" },
+        { hex: "#0891b2", name: "Ciano" }
+    ];
+
+    // Reset state when tripId changes, though unnecessary entirely with key approach or effect deps
+    useEffect(() => {
+        setIsLoading(true);
+        // Default optimistic for clean switch
+        setItinerary([]);
+        setExpenses([]);
+        setTransport([]);
+        setDays([]);
+        setBackpack([]);
+    }, [tripId]);
 
     // New Item States
     const [newItemItinerary, setNewItemItinerary] = useState({ nome: "", categoria: "Museo", quartiere: "", durata: "", orari: "", eccezioni: "", img: "", mapEmbed: "" });
@@ -275,6 +299,7 @@ const App = () => {
     const [backpackOwnerFilter, setBackpackOwnerFilter] = useState("Andrea Inardi");
     const [backpackFilterLocation, setBackpackFilterLocation] = useState("Tutti"); // Tutti, Dentro, Fuori
     const [backpackFilterPlacement, setBackpackFilterPlacement] = useState("Tutti"); // Dynamic based on items
+    const [newItemTripDetails, setNewItemTripDetails] = useState({ title: "", dates: "", flag: "" });
 
     // Editing State
     const [editingId, setEditingId] = useState(null);
@@ -308,6 +333,12 @@ const App = () => {
         }
     };
 
+    // --- DB HELPER ---
+    const getDBCollection = (collectionName) => {
+        // Scope to the specific trip
+        return db.collection("trips").doc(tripId).collection(collectionName);
+    };
+
     // --- FIREBASE LISTENERS ---
     useEffect(() => {
         if (!window.db) {
@@ -316,30 +347,39 @@ const App = () => {
             return;
         }
 
-        const unsubItinerary = db.collection("itinerary").onSnapshot(snapshot => {
+        const unsubItinerary = getDBCollection("itinerary").onSnapshot(snapshot => {
             const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setItinerary(data);
         });
 
-        const unsubTransport = db.collection("transport").onSnapshot(snapshot => {
+        const unsubTransport = getDBCollection("transport").onSnapshot(snapshot => {
             const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setTransport(data);
         });
 
-        const unsubExpenses = db.collection("expenses").onSnapshot(snapshot => {
+        const unsubExpenses = getDBCollection("expenses").onSnapshot(snapshot => {
             const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setExpenses(data);
             setIsLoading(false);
         });
 
-        const unsubDays = db.collection("days").orderBy("data").onSnapshot(snapshot => {
+        const unsubDays = getDBCollection("days").orderBy("data").onSnapshot(snapshot => {
             const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setDays(data);
         });
 
-        const unsubBackpack = db.collection("backpack").onSnapshot(snapshot => {
+        const unsubBackpack = getDBCollection("backpack").onSnapshot(snapshot => {
             const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setBackpack(data);
+        });
+
+        // Settings are now the trip doc itself, passed as prop or fetched if we want real-time updates of title
+        const unsubSettings = db.collection("trips").doc(tripId).onSnapshot(doc => {
+            if (doc.exists) {
+                // Merge doc data into tripDetails, ensuring we don't overwrite if not present
+                const data = doc.data();
+                setTripDetails(prev => ({ ...prev, ...data }));
+            }
         });
 
         return () => {
@@ -348,8 +388,9 @@ const App = () => {
             unsubExpenses();
             unsubDays();
             unsubBackpack();
+            unsubSettings();
         };
-    }, []);
+    }, [tripId]);
 
     // --- STATS LOGIC ---
     // --- STATS LOGIC ---
@@ -390,7 +431,7 @@ const App = () => {
     const toggleVisit = (id, currentStatus) => {
         // Optimistic
         setItinerary(prev => prev.map(i => i.id === id ? { ...i, visited: !currentStatus } : i));
-        db.collection("itinerary").doc(id).update({ visited: !currentStatus }).catch(err => {
+        getDBCollection("itinerary").doc(id).update({ visited: !currentStatus }).catch(err => {
             console.error("Reverting optimistic update", err);
             // Revert handled by snapshot listener automatically usually, but could be explicit here
         });
@@ -398,22 +439,22 @@ const App = () => {
 
     const togglePaid = (id, currentStatus) => {
         setExpenses(prev => prev.map(e => e.id === id ? { ...e, pagato: !currentStatus } : e));
-        db.collection("expenses").doc(id).update({ pagato: !currentStatus });
+        getDBCollection("expenses").doc(id).update({ pagato: !currentStatus });
     };
 
     const toggleBooked = (id, currentStatus) => {
         setExpenses(prev => prev.map(e => e.id === id ? { ...e, prenotato: !currentStatus } : e));
-        db.collection("expenses").doc(id).update({ prenotato: !currentStatus });
+        getDBCollection("expenses").doc(id).update({ prenotato: !currentStatus });
     };
 
     const toggleTransportPaid = (id, currentStatus) => {
         setTransport(prev => prev.map(t => t.id === id ? { ...t, pagato: !currentStatus } : t));
-        db.collection("transport").doc(id).update({ pagato: !currentStatus });
+        getDBCollection("transport").doc(id).update({ pagato: !currentStatus });
     };
 
     const toggleTransportBooked = (id, currentStatus) => {
         setTransport(prev => prev.map(t => t.id === id ? { ...t, prenotato: !currentStatus } : t));
-        db.collection("transport").doc(id).update({ prenotato: !currentStatus });
+        getDBCollection("transport").doc(id).update({ prenotato: !currentStatus });
     };
 
 
@@ -470,11 +511,12 @@ const App = () => {
         if (editingId) {
             // Update
             setItinerary(prev => prev.map(i => i.id === editingId ? { ...i, ...newItemItinerary } : i));
-            await db.collection("itinerary").doc(editingId).update(newItemItinerary);
+            setItinerary(prev => prev.map(i => i.id === editingId ? { ...i, ...newItemItinerary } : i));
+            await getDBCollection("itinerary").doc(editingId).update(newItemItinerary);
         } else {
             // Create
             setItinerary([...itinerary, { ...newItemItinerary, id: 'temp_' + Date.now(), visited: false }]); // Optimistic
-            await db.collection("itinerary").add({ ...newItemItinerary, visited: false });
+            await getDBCollection("itinerary").add({ ...newItemItinerary, visited: false });
         }
 
         setActiveModal(null);
@@ -491,7 +533,7 @@ const App = () => {
     const handleDeleteItinerary = async (id) => {
         requestConfirm("Elimina Attrazione", "Sei sicuro di voler eliminare questa attrazione?", async () => {
             setItinerary(prev => prev.filter(i => i.id !== id));
-            await db.collection("itinerary").doc(id).delete();
+            await getDBCollection("itinerary").doc(id).delete();
         });
     };
 
@@ -500,10 +542,10 @@ const App = () => {
 
         if (editingId) {
             setTransport(prev => prev.map(t => t.id === editingId ? { ...t, ...newItemTransport } : t));
-            await db.collection("transport").doc(editingId).update(newItemTransport);
+            await getDBCollection("transport").doc(editingId).update(newItemTransport);
         } else {
             setTransport([...transport, { ...newItemTransport, id: 'temp_' + Date.now() }]);
-            await db.collection("transport").add(newItemTransport);
+            await getDBCollection("transport").add(newItemTransport);
         }
 
         setActiveModal(null);
@@ -520,7 +562,7 @@ const App = () => {
     const handleDeleteTransport = async (id) => {
         requestConfirm("Elimina Spostamento", "Sei sicuro di voler eliminare questo spostamento?", async () => {
             setTransport(prev => prev.filter(t => t.id !== id));
-            await db.collection("transport").doc(id).delete();
+            await getDBCollection("transport").doc(id).delete();
         });
     };
 
@@ -530,10 +572,10 @@ const App = () => {
 
         if (editingId) {
             setExpenses(prev => prev.map(e => e.id === editingId ? { ...e, ...expenseData } : e));
-            await db.collection("expenses").doc(editingId).update(expenseData);
+            await getDBCollection("expenses").doc(editingId).update(expenseData);
         } else {
             setExpenses([...expenses, { ...expenseData, id: 'temp_' + Date.now() }]);
-            await db.collection("expenses").add(expenseData);
+            await getDBCollection("expenses").add(expenseData);
         }
 
         setActiveModal(null);
@@ -550,7 +592,7 @@ const App = () => {
     const handleDeleteExpense = async (id) => {
         requestConfirm("Elimina Spesa", "Sei sicuro di voler eliminare questa spesa?", async () => {
             setExpenses(prev => prev.filter(e => e.id !== id));
-            await db.collection("expenses").doc(id).delete();
+            await getDBCollection("expenses").doc(id).delete();
         });
     };
 
@@ -558,7 +600,7 @@ const App = () => {
     const handleAddDay = async () => {
         if (!newItemDay.data) return;
 
-        await db.collection("days").add({
+        await getDBCollection("days").add({
             data: newItemDay.data,
             events: []
         });
@@ -569,12 +611,12 @@ const App = () => {
 
     const handleDeleteDay = async (id) => {
         requestConfirm("Elimina Giornata", "Eliminare questa giornata e tutti i suoi eventi?", async () => {
-            await db.collection("days").doc(id).delete();
+            await getDBCollection("days").doc(id).delete();
         });
     };
 
     const openAddEvent = (dayId) => {
-        setEditingId(dayId); // Using editingId to store the temporary Day ID we are adding to
+        setEditingId(dayId);
         setActiveModal('event');
     };
 
@@ -583,7 +625,7 @@ const App = () => {
         if (newItemEvent.type !== 'custom' && !newItemEvent.attractionId) return;
         if (newItemEvent.type === 'custom' && !newItemEvent.customTitle) return;
 
-        const dayRef = db.collection("days").doc(editingId);
+        const dayRef = getDBCollection("days").doc(editingId);
         const dayDoc = days.find(d => d.id === editingId);
 
         const newEventObj = {
@@ -592,7 +634,6 @@ const App = () => {
         };
 
         const updatedEvents = [...(dayDoc.events || []), newEventObj];
-        // Sort events by time
         updatedEvents.sort((a, b) => a.time.localeCompare(b.time));
 
         await dayRef.update({ events: updatedEvents });
@@ -603,7 +644,7 @@ const App = () => {
     };
 
     const handleDeleteEvent = async (dayId, eventId) => {
-        const dayRef = db.collection("days").doc(dayId);
+        const dayRef = getDBCollection("days").doc(dayId);
         const dayDoc = days.find(d => d.id === dayId);
         const updatedEvents = dayDoc.events.filter(e => e.id !== eventId);
         await dayRef.update({ events: updatedEvents });
@@ -625,10 +666,10 @@ const App = () => {
         if (editingId) {
             // Update existing
             setBackpack(prev => prev.map(i => i.id === editingId ? { ...i, ...backpackData } : i));
-            await db.collection("backpack").doc(editingId).update(backpackData);
+            await getDBCollection("backpack").doc(editingId).update(backpackData);
         } else {
             // Create new
-            await db.collection("backpack").add({
+            await getDBCollection("backpack").add({
                 ...backpackData,
                 packed: false
             });
@@ -637,12 +678,7 @@ const App = () => {
         setEditingId(null);
         setNewItemBackpack({ item: "", categoria: newItemBackpack.categoria, packed: false, qty: 1, outside: false, ml: "", owner: backpackOwnerFilter, collocazione: "" });
 
-        // If we were editing, close the modal. If adding, keep open for rapid entry? 
-        // Let's close it if editing to feel natural, keep open if adding? 
-        // Actually, if editing, we definitely want to close.
         if (editingId) setActiveModal(null);
-
-        // Focus if kept open
         if (!editingId) document.getElementById('backpack-input')?.focus();
     };
 
@@ -653,7 +689,7 @@ const App = () => {
     };
 
     const handleDeleteBackpackItem = async (id) => {
-        await db.collection("backpack").doc(id).delete();
+        await getDBCollection("backpack").doc(id).delete();
     };
 
     const togglePacked = (id, currentStatus) => {
@@ -662,13 +698,13 @@ const App = () => {
         const newOutside = !newPacked; // If Packed (True) -> Inside (Outside=False). If Unpacked (False) -> Outside (Outside=True).
 
         setBackpack(prev => prev.map(i => i.id === id ? { ...i, packed: newPacked, outside: newOutside } : i));
-        db.collection("backpack").doc(id).update({ packed: newPacked, outside: newOutside });
+        getDBCollection("backpack").doc(id).update({ packed: newPacked, outside: newOutside });
     };
 
     const updateBackpackQty = (id, currentQty, delta) => {
         const newQty = Math.max(1, currentQty + delta);
         setBackpack(prev => prev.map(i => i.id === id ? { ...i, qty: newQty } : i));
-        db.collection("backpack").doc(id).update({ qty: newQty });
+        getDBCollection("backpack").doc(id).update({ qty: newQty });
     };
 
     const handleReloadBackpackOnly = async () => {
@@ -676,16 +712,14 @@ const App = () => {
             const batch = db.batch();
 
             // 1. Delete all current backpack docs
-            // Note: In client SDK deleting collection is hard, so we just delete what we have in state or specific query.
-            // For safety/speed in this small app, we iterate snapshot.
-            const snapshot = await db.collection("backpack").get();
+            const snapshot = await getDBCollection("backpack").get();
             snapshot.docs.forEach(doc => {
                 batch.delete(doc.ref);
             });
 
             // 2. Add seed data
             seedBackpack.forEach(item => {
-                const docRef = db.collection("backpack").doc();
+                const docRef = getDBCollection("backpack").doc();
                 batch.set(docRef, item);
             });
 
@@ -698,27 +732,24 @@ const App = () => {
         requestConfirm("Reset Dati", "ATTENZIONE: Questo cancellerà tutti i dati e li ripristinerà a quelli di default. Questa azione è irreversibile. Procedere?", async () => {
             const batch = db.batch();
 
-            // Clean cleanup if needed, but for now just seed. 
-            // Real app would delete collection first.
-
             seedItinerary.forEach(item => {
-                const docRef = db.collection("itinerary").doc();
+                const docRef = getDBCollection("itinerary").doc();
                 batch.set(docRef, item);
             });
             seedTransport.forEach(item => {
-                const docRef = db.collection("transport").doc();
+                const docRef = getDBCollection("transport").doc();
                 batch.set(docRef, item);
             });
             seedExpenses.forEach(item => {
-                const docRef = db.collection("expenses").doc();
+                const docRef = getDBCollection("expenses").doc();
                 batch.set(docRef, item);
             });
             seedDays.forEach(item => {
-                const docRef = db.collection("days").doc();
+                const docRef = getDBCollection("days").doc();
                 batch.set(docRef, item);
             });
             seedBackpack.forEach(item => {
-                const docRef = db.collection("backpack").doc();
+                const docRef = getDBCollection("backpack").doc();
                 batch.set(docRef, item);
             });
 
@@ -727,18 +758,38 @@ const App = () => {
         });
     };
 
+    const handleUpdateTripDetails = async () => {
+        if (!newItemTripDetails.title) return;
+
+        await db.collection("trips").doc(tripId).update(newItemTripDetails);
+        setTripDetails(prev => ({ ...prev, ...newItemTripDetails }));
+        setActiveModal(null);
+    };
+
+    const openEditTripDetails = () => {
+        setNewItemTripDetails(tripDetails);
+        setActiveModal('tripDetails');
+    };
 
     return (
         <div className="max-w-md mx-auto min-h-screen bg-gray-50 flex flex-col relative sm:max-w-xl md:max-w-3xl">
 
             {/* Header */}
-            <header className="london-bg text-white p-6 pb-12 shadow-md">
+            <header className="text-white p-6 pb-12 shadow-md transition-colors duration-300" style={{ backgroundColor: tripDetails.color || '#000000' }}>
                 <div className="flex justify-between items-center">
-                    <h1 className="text-2xl font-bold flex items-center gap-2">
-                        <span>🇬🇧</span> Londra 2026
-                    </h1>
+                    <div onClick={onBack} className="cursor-pointer hover:bg-white/10 p-1 rounded-lg transition-colors mr-2">
+                        <ArrowDown size={20} className="transform rotate-90" />
+                    </div>
+                    <div className="flex-1">
+                        <h1 className="text-2xl font-bold flex items-center gap-2">
+                            <span>{tripDetails.flag}</span> {tripDetails.title}
+                            <button onClick={openEditTripDetails} className="bg-white/20 hover:bg-white/30 p-1.5 rounded-full transition-colors ml-2">
+                                <Edit size={14} />
+                            </button>
+                        </h1>
+                    </div>
                     <div className="text-xs bg-white/20 px-3 py-1 rounded-full">
-                        25 Feb - 02 Mar
+                        {tripDetails.dates}
                     </div>
                 </div>
                 <div className="flex justify-between items-end mt-1">
@@ -1860,6 +1911,57 @@ const App = () => {
                 </Button>
             </Modal>
 
+            {/* Trip Details Modal */}
+            <Modal isOpen={activeModal === 'tripDetails'} onClose={() => setActiveModal(null)} title="Modifica Viaggio">
+                <InputGroup label="Titolo Viaggio">
+                    <input
+                        type="text"
+                        className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:border-black transition-all"
+                        value={newItemTripDetails.title}
+                        onChange={(e) => setNewItemTripDetails({ ...newItemTripDetails, title: e.target.value })}
+                    />
+                </InputGroup>
+                <div className="grid grid-cols-2 gap-3">
+                    <InputGroup label="Bandiera / Icona">
+                        <input
+                            type="text"
+                            placeholder="Es. 🇬🇧"
+                            className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:border-black transition-all text-center text-lg"
+                            value={newItemTripDetails.flag}
+                            onChange={(e) => setNewItemTripDetails({ ...newItemTripDetails, flag: e.target.value })}
+                        />
+                    </InputGroup>
+                    <InputGroup label="Date">
+                        <input
+                            type="text"
+                            placeholder="Es. 25 Feb - 02 Mar"
+                            className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:border-black transition-all"
+                            value={newItemTripDetails.dates}
+                            onChange={(e) => setNewItemTripDetails({ ...newItemTripDetails, dates: e.target.value })}
+                        />
+                    </InputGroup>
+                </div>
+
+                <div className="mb-6">
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2 ml-1">Colore Principale</label>
+                    <div className="flex flex-wrap gap-3">
+                        {colors.map(c => (
+                            <button
+                                key={c.hex}
+                                onClick={() => setNewItemTripDetails({ ...newItemTripDetails, color: c.hex })}
+                                className={`w-8 h-8 rounded-full shadow-sm transition-transform active:scale-95 flex items-center justify-center border-2 ${newItemTripDetails.color === c.hex ? 'border-gray-800 scale-110' : 'border-transparent'}`}
+                                style={{ backgroundColor: c.hex }}
+                                title={c.name}
+                            >
+                                {newItemTripDetails.color === c.hex && <Check size={14} className="text-white drop-shadow-md" />}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                <Button onClick={handleUpdateTripDetails} className="mt-4">Salva Modifiche</Button>
+            </Modal>
+
             {/* Confirmation Modal */}
             <Modal isOpen={confirmModal.isOpen} onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })} title={confirmModal.title}>
                 <p className="text-gray-600 mb-6">{confirmModal.message}</p>
@@ -1919,23 +2021,43 @@ const App = () => {
             {/* Footer Nav for Mobile */}
             <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-gray-200 md:hidden pb-safe z-40">
                 <div className="flex justify-around p-2">
-                    <button onClick={() => setActiveTab("itinerary")} className={`flex flex-col items-center p-2 rounded-xl transition-all ${activeTab === 'itinerary' ? 'text-red-600 bg-red-50' : 'text-gray-400 hover:text-gray-600'}`}>
+                    <button
+                        onClick={() => setActiveTab("itinerary")}
+                        className={`flex flex-col items-center p-2 rounded-xl transition-all ${activeTab === 'itinerary' ? 'bg-gray-50' : 'text-gray-400 hover:text-gray-600'}`}
+                        style={{ color: activeTab === 'itinerary' ? (tripDetails.color || '#dc2626') : undefined }}
+                    >
                         <Calendar size={20} className="mb-1" />
                         <span className="text-[10px] font-bold">Giornate</span>
                     </button>
-                    <button onClick={() => setActiveTab("attractions")} className={`flex flex-col items-center p-2 rounded-xl transition-all ${activeTab === 'attractions' ? 'text-red-600 bg-red-50' : 'text-gray-400 hover:text-gray-600'}`}>
+                    <button
+                        onClick={() => setActiveTab("attractions")}
+                        className={`flex flex-col items-center p-2 rounded-xl transition-all ${activeTab === 'attractions' ? 'bg-gray-50' : 'text-gray-400 hover:text-gray-600'}`}
+                        style={{ color: activeTab === 'attractions' ? (tripDetails.color || '#dc2626') : undefined }}
+                    >
                         <MapPin size={20} className="mb-1" />
                         <span className="text-[10px] font-bold">Attrazioni</span>
                     </button>
-                    <button onClick={() => setActiveTab("expenses")} className={`flex flex-col items-center p-2 rounded-xl transition-all ${activeTab === 'expenses' ? 'text-red-600 bg-red-50' : 'text-gray-400 hover:text-gray-600'}`}>
+                    <button
+                        onClick={() => setActiveTab("expenses")}
+                        className={`flex flex-col items-center p-2 rounded-xl transition-all ${activeTab === 'expenses' ? 'bg-gray-50' : 'text-gray-400 hover:text-gray-600'}`}
+                        style={{ color: activeTab === 'expenses' ? (tripDetails.color || '#dc2626') : undefined }}
+                    >
                         <PoundSterling size={20} className="mb-1" />
                         <span className="text-[10px] font-bold">Spese</span>
                     </button>
-                    <button onClick={() => setActiveTab("transport")} className={`flex flex-col items-center p-2 rounded-xl transition-all ${activeTab === 'transport' ? 'text-red-600 bg-red-50' : 'text-gray-400 hover:text-gray-600'}`}>
+                    <button
+                        onClick={() => setActiveTab("transport")}
+                        className={`flex flex-col items-center p-2 rounded-xl transition-all ${activeTab === 'transport' ? 'bg-gray-50' : 'text-gray-400 hover:text-gray-600'}`}
+                        style={{ color: activeTab === 'transport' ? (tripDetails.color || '#dc2626') : undefined }}
+                    >
                         <Train size={20} className="mb-1" />
                         <span className="text-[10px] font-bold">Mezzi</span>
                     </button>
-                    <button onClick={() => setActiveTab("backpack")} className={`flex flex-col items-center p-2 rounded-xl transition-all ${activeTab === 'backpack' ? 'text-red-600 bg-red-50' : 'text-gray-400 hover:text-gray-600'}`}>
+                    <button
+                        onClick={() => setActiveTab("backpack")}
+                        className={`flex flex-col items-center p-2 rounded-xl transition-all ${activeTab === 'backpack' ? 'bg-gray-50' : 'text-gray-400 hover:text-gray-600'}`}
+                        style={{ color: activeTab === 'backpack' ? (tripDetails.color || '#dc2626') : undefined }}
+                    >
                         <Backpack size={20} className="mb-1" />
                         <span className="text-[10px] font-bold">Zaino</span>
                     </button>
@@ -1944,6 +2066,250 @@ const App = () => {
 
         </div >
     );
+};
+
+const LandingPage = ({ onSelectTrip }) => {
+    const [trips, setTrips] = useState([]);
+    const [isCreating, setIsCreating] = useState(false);
+    const [newTripData, setNewTripData] = useState({ title: "", flag: "🇬🇧", dates: "", color: "#000000" });
+
+    // Colors Palette
+    const colors = [
+        { hex: "#000000", name: "Nero" },
+        { hex: "#dc2626", name: "Rosso" },
+        { hex: "#2563eb", name: "Blu" },
+        { hex: "#16a34a", name: "Verde" },
+        { hex: "#d97706", name: "Arancione" },
+        { hex: "#9333ea", name: "Viola" },
+        { hex: "#db2777", name: "Rosa" },
+        { hex: "#0891b2", name: "Ciano" }
+    ];
+
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: "", message: "", onConfirm: null });
+
+    useEffect(() => {
+        if (!window.db) return;
+        const unsub = db.collection("trips").onSnapshot(snapshot => {
+            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setTrips(data);
+        });
+        return () => unsub();
+    }, []);
+
+    const handleCreateTrip = async () => {
+        if (!newTripData.title) return;
+        const docRef = await db.collection("trips").add({
+            title: newTripData.title,
+            dates: newTripData.dates || "Date TBD",
+            flag: newTripData.flag || "🌍",
+            color: newTripData.color || "#000000"
+        });
+        onSelectTrip(docRef.id);
+        setIsCreating(false);
+        setNewTripData({ title: "", flag: "🇬🇧", dates: "", color: "#000000" });
+    };
+
+    const handleDeleteTrip = async (tripId, tripTitle) => {
+        setConfirmModal({
+            isOpen: true,
+            title: "Elimina Viaggio",
+            message: `Sei sicuro di voler eliminare DEFINITIVAMENTE il viaggio "${tripTitle}"? Questa azione non può essere annullata.`,
+            onConfirm: async () => {
+                try {
+                    // Elimina ogni subcollection manualmente (Firestore non elimina le collection ricorsivamente)
+                    const subCollections = ["itinerary", "expenses", "transport", "days", "backpack"];
+
+                    const deleteCollection = async (coll) => {
+                        const snapshot = await db.collection("trips").doc(tripId).collection(coll).get();
+                        const batch = db.batch();
+                        snapshot.docs.forEach(doc => batch.delete(doc.ref));
+                        await batch.commit();
+                    };
+
+                    await Promise.all(subCollections.map(deleteCollection));
+
+                    // Elimina il doc principale
+                    await db.collection("trips").doc(tripId).delete();
+
+                } catch (error) {
+                    console.error("Errore eliminazione:", error);
+                    alert("Errore durante l'eliminazione: " + error.message);
+                }
+            }
+        });
+    };
+
+    return (
+        <div className="min-h-screen bg-slate-50 pb-safe">
+            {/* Modern Header */}
+            <header className="bg-white/80 backdrop-blur-md sticky top-0 z-10 border-b border-gray-100 px-6 py-4 flex items-center justify-between transition-all">
+                <div className="flex items-center gap-3">
+                    <img src="img/icon-192.png" alt="App Icon" className="w-10 h-10 rounded-xl shadow-md" />
+                    <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">
+                        Trip Planner
+                    </h1>
+                </div>
+                {/* Optional profile or settings icon could go here */}
+            </header>
+
+            <div className="p-6 pb-24 space-y-5 max-w-md mx-auto sm:max-w-xl md:max-w-3xl">
+                <div>
+                    <h2 className="text-2xl font-bold text-gray-800 mb-1">I tuoi Viaggi</h2>
+                    <p className="text-gray-500 text-sm">Pronto per la prossima avventura?</p>
+                </div>
+
+                {trips.length === 0 && (
+                    <div className="text-center py-10 opacity-60">
+                        <div className="bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <MapPin size={24} className="text-gray-400" />
+                        </div>
+                        <p className="text-gray-500">Nessun viaggio trovato.</p>
+                        <p className="text-sm text-gray-400">Creane uno nuovo per iniziare!</p>
+                    </div>
+                )}
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                    {trips.map(trip => (
+                        <div
+                            key={trip.id}
+                            onClick={() => onSelectTrip(trip.id)}
+                            className="group bg-white rounded-2xl p-5 shadow-sm border border-gray-100 relative overflow-hidden cursor-pointer"
+                        >
+                            {/* Color Accent (Always Visible) */}
+                            <div
+                                className="absolute top-0 left-0 w-1.5 h-full opacity-100"
+                                style={{ backgroundColor: trip.color || '#000000' }}
+                            />
+
+                            <div className="flex justify-between items-start">
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <span className="text-2xl filter drop-shadow-sm">{trip.flag}</span>
+                                        <h3 className="font-bold text-lg text-gray-800 leading-tight">
+                                            {trip.title}
+                                        </h3>
+                                    </div>
+                                    <p className="text-gray-500 text-sm font-medium flex items-center gap-1">
+                                        <Calendar size={12} />
+                                        {trip.dates}
+                                    </p>
+                                </div>
+                                <div className="flex items-start gap-2">
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); handleDeleteTrip(trip.id, trip.title); }}
+                                        className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all -mr-2 -mt-2"
+                                        title="Elimina Viaggio"
+                                    >
+                                        <Trash size={18} />
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="mt-4 flex items-center justify-between">
+                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider bg-gray-50 px-2 py-1 rounded-md">
+                                    Viaggio
+                                </span>
+                                <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-400">
+                                    <ArrowDown size={16} className="transform -rotate-90" />
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Floating Action Button (FAB) for Create */}
+            <div className="fixed bottom-6 right-6 z-20">
+                <button
+                    onClick={() => setIsCreating(true)}
+                    className="bg-black text-white p-4 rounded-full shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 flex items-center gap-2 group"
+                >
+                    <Plus size={24} className="group-hover:rotate-90 transition-transform duration-300" />
+                    <span className="font-bold pr-2 hidden group-hover:inline-block transition-all duration-300">Nuovo</span>
+                </button>
+            </div>
+
+
+
+
+            {/* Confirmation Modal */}
+            <Modal isOpen={confirmModal.isOpen} onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })} title={confirmModal.title}>
+                <p className="text-gray-600 mb-6">{confirmModal.message}</p>
+                <div className="grid grid-cols-2 gap-3">
+                    <Button variant="outline" onClick={() => setConfirmModal({ ...confirmModal, isOpen: false })}>
+                        Annulla
+                    </Button>
+                    <Button variant="primary" onClick={() => { confirmModal.onConfirm && confirmModal.onConfirm(); setConfirmModal({ ...confirmModal, isOpen: false }); }} className="bg-red-600 hover:bg-red-700 text-white border-0">
+                        Conferma
+                    </Button>
+                </div>
+            </Modal>
+
+            {/* Create Trip Modal */}
+            <Modal isOpen={isCreating} onClose={() => setIsCreating(false)} title="Nuovo Viaggio">
+                <InputGroup label="Nome Viaggio">
+                    <input
+                        type="text"
+                        value={newTripData.title}
+                        onChange={e => setNewTripData({ ...newTripData, title: e.target.value })}
+                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-black focus:outline-none transition-colors"
+                        placeholder="Es. Londra 2026"
+                    />
+                </InputGroup>
+                <div className="grid grid-cols-2 gap-3">
+                    <InputGroup label="Bandiera (Emoji)">
+                        <input
+                            type="text"
+                            value={newTripData.flag}
+                            onChange={e => setNewTripData({ ...newTripData, flag: e.target.value })}
+                            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-black focus:outline-none transition-colors text-center text-lg"
+                            placeholder="🇬🇧"
+                        />
+                    </InputGroup>
+                    <InputGroup label="Date">
+                        <input
+                            type="text"
+                            value={newTripData.dates}
+                            onChange={e => setNewTripData({ ...newTripData, dates: e.target.value })}
+                            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-black focus:outline-none transition-colors"
+                            placeholder="Es. 25 Feb - 2 Mar"
+                        />
+                    </InputGroup>
+                </div>
+
+                <div className="mb-6">
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2 ml-1">Colore Principale</label>
+                    <div className="flex flex-wrap gap-3">
+                        {colors.map(c => (
+                            <button
+                                key={c.hex}
+                                onClick={() => setNewTripData({ ...newTripData, color: c.hex })}
+                                className={`w-8 h-8 rounded-full shadow-sm transition-transform active:scale-95 flex items-center justify-center border-2 ${newTripData.color === c.hex ? 'border-gray-800 scale-110' : 'border-transparent'}`}
+                                style={{ backgroundColor: c.hex }}
+                                title={c.name}
+                            >
+                                {newTripData.color === c.hex && <Check size={14} className="text-white drop-shadow-md" />}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                <Button onClick={handleCreateTrip}>Crea Viaggio</Button>
+            </Modal>
+        </div>
+    );
+};
+
+const App = () => {
+    const [currentTripId, setCurrentTripId] = useState(null);
+
+    // Persist selection? Maybe later.
+
+    if (!currentTripId) {
+        return <LandingPage onSelectTrip={setCurrentTripId} />;
+    }
+
+    return <TripDashboard tripId={currentTripId} onBack={() => setCurrentTripId(null)} />;
 };
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
