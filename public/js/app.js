@@ -1,4 +1,12 @@
 const { useState, useEffect, useMemo } = React;
+const { HashRouter, Routes, Route, Link, useParams, useNavigate, useLocation, Navigate } = ReactRouterDOM;
+
+// --- GOOGLE DRIVE CONFIG ---
+// TODO: USER MUST REPLACE THESE VALUES
+const CLIENT_ID = "1047229416824-3ill0lqf87p012cvhdvkcdkknkogs293.apps.googleusercontent.com";
+const API_KEY = "AIzaSyCDj3TLGQei2xC_H5HJ_qL04SLKqs12JdM";
+const DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"];
+const SCOPES = "https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/userinfo.email";
 
 // --- ICONE INTEGRATE ---
 const IconBase = ({ size = 24, className = "", children }) => (
@@ -10,6 +18,8 @@ const IconBase = ({ size = 24, className = "", children }) => (
 const MapPin = (props) => (<IconBase {...props}><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" /></IconBase>);
 const Train = (props) => (<IconBase {...props}><rect width="16" height="16" x="4" y="3" rx="2" /><path d="M4 11h16" /><path d="M12 3v8" /><path d="m8 19-2 3" /><path d="m18 22-2-3" /><circle cx="8" cy="15" r="1" /><circle cx="16" cy="15" r="1" /></IconBase>);
 const PoundSterling = (props) => (<IconBase {...props}><path d="M18 7c0-5.333-8-5.333-8 0" /><path d="M10 7v14" /><path d="M6 21h12" /><path d="M6 13h10" /></IconBase>);
+const Euro = (props) => (<IconBase {...props}><path d="M4 10h12" /><path d="M4 14h9" /><path d="M19 6a7.7 7.7 0 0 0-5.2-2A7.9 7.9 0 0 0 6 12c0 4.4 3.5 8 7.8 8 2 0 3.8-.8 5.2-2" /></IconBase>);
+const DollarSign = (props) => (<IconBase {...props}><line x1="12" x2="12" y1="2" y2="22" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></IconBase>);
 const CheckCircle = (props) => (<IconBase {...props}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><path d="m9 11 3 3L22 4" /></IconBase>);
 const AlertCircle = (props) => (<IconBase {...props}><circle cx="12" cy="12" r="10" /><line x1="12" x2="12" y1="8" y2="12" /><line x1="12" x2="12.01" y1="16" y2="16" /></IconBase>);
 const Plus = (props) => (<IconBase {...props}><path d="M5 12h14" /><path d="M12 5v14" /></IconBase>);
@@ -27,6 +37,8 @@ const Clock = (props) => (<IconBase {...props}><circle cx="12" cy="12" r="10"></
 const Check = (props) => (<IconBase {...props}><polyline points="20 6 9 17 4 12" /></IconBase>);
 const ArrowDown = (props) => (<IconBase {...props}><path d="M12 5v14" /><path d="m19 12-7 7-7-7" /></IconBase>);
 const Backpack = (props) => (<IconBase {...props}><path d="M4 10a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z" /><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" /><path d="M8 21v-5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v5" /><path d="M8 10h8" /><path d="M9 14h6" /></IconBase>);
+const FileText = (props) => (<IconBase {...props}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" /><polyline points="14 2 14 8 20 8" /></IconBase>);
+const LinkIcon = (props) => (<IconBase {...props}><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></IconBase>);
 
 // --- DATI INIZIALI (SEED DATA) ---
 const seedItinerary = [
@@ -251,14 +263,37 @@ const InputGroup = ({ label, children }) => (
     </div>
 );
 
-const TripDashboard = ({ tripId, onBack }) => {
-    const [activeTab, setActiveTab] = useState("itinerary");
+// --- REFACTORED TRIP DASHBOARD FOR ROUTING ---
+const TripDashboard = () => {
+    const { tripId, tab } = useParams();
+    const navigate = useNavigate();
+    const location = useLocation();
+
+    // Default to 'itinerary' if no tab is provided (though Route should handle this, handy fallback)
+    const activeTab = tab || "itinerary";
+
+    // Helper to switch tabs via URL
+    const setActiveTab = (newTab) => {
+        navigate(`/trip/${tripId}/${newTab}`);
+    };
+
+    const onBack = () => navigate('/');
+
     const [itinerary, setItinerary] = useState([]);
-    const [days, setDays] = useState([]); // NEW: Days state
+    const [days, setDays] = useState([]);
     const [transport, setTransport] = useState([]);
     const [expenses, setExpenses] = useState([]);
-    const [backpack, setBackpack] = useState([]); // NEW: Backpack state
-    const [tripDetails, setTripDetails] = useState({ title: "Londra 2026", dates: "25 Feb - 02 Mar", flag: "🇬🇧", color: "#000000" });
+    const [backpack, setBackpack] = useState([]);
+    const [documents, setDocuments] = useState([]);
+    const [driveFiles, setDriveFiles] = useState([]);
+    const [userEmail, setUserEmail] = useState(null);
+    const [driveConnected, setDriveConnected] = useState(false);
+    const [gapiInited, setGapiInited] = useState(false);
+    const [gisInited, setGisInited] = useState(false);
+    const [tokenClient, setTokenClient] = useState(null);
+    const [uploading, setUploading] = useState(false);
+
+    const [tripDetails, setTripDetails] = useState({ title: "Londra 2026", dates: "25 Feb - 02 Mar", flag: "🇬🇧", color: "#000000", currencySymbol: "£", exchangeRate: 1.15 });
     const [isLoading, setIsLoading] = useState(true);
 
     // Modal States
@@ -278,15 +313,15 @@ const TripDashboard = ({ tripId, onBack }) => {
         { hex: "#0891b2", name: "Ciano" }
     ];
 
-    // Reset state when tripId changes, though unnecessary entirely with key approach or effect deps
+    // Reset state when tripId changes
     useEffect(() => {
         setIsLoading(true);
-        // Default optimistic for clean switch
         setItinerary([]);
         setExpenses([]);
         setTransport([]);
         setDays([]);
         setBackpack([]);
+        setDocuments([]);
     }, [tripId]);
 
     // New Item States
@@ -297,9 +332,11 @@ const TripDashboard = ({ tripId, onBack }) => {
     const [newItemExpense, setNewItemExpense] = useState({ item: "", costo: "", valuta: "£", pagato: false, prenotato: false, chi: "", note: "" });
     const [newItemBackpack, setNewItemBackpack] = useState({ item: "", categoria: "Altro", packed: false, qty: 1, outside: false, ml: "", owner: "Andrea Inardi", collocazione: "" });
     const [backpackOwnerFilter, setBackpackOwnerFilter] = useState("Andrea Inardi");
-    const [backpackFilterLocation, setBackpackFilterLocation] = useState("Tutti"); // Tutti, Dentro, Fuori
-    const [backpackFilterPlacement, setBackpackFilterPlacement] = useState("Tutti"); // Dynamic based on items
+    const [backpackFilterLocation, setBackpackFilterLocation] = useState("Tutti");
+    const [backpackFilterPlacement, setBackpackFilterPlacement] = useState("Tutti");
     const [newItemTripDetails, setNewItemTripDetails] = useState({ title: "", dates: "", flag: "" });
+    // Documents now manage files via Drive, but we keep this for manual links if needed, or repurposed
+    const [newItemDocument, setNewItemDocument] = useState({ nome: "", url: "", note: "" });
 
     // Editing State
     const [editingId, setEditingId] = useState(null);
@@ -314,6 +351,9 @@ const TripDashboard = ({ tripId, onBack }) => {
 
     // PWA Install State
     const [deferredPrompt, setDeferredPrompt] = useState(null);
+
+    // --- SUB-VIEW STATE FOR COMBINED TAB ---
+    const [placesViewMode, setPlacesViewMode] = useState("places"); // 'places' | 'transport'
 
     useEffect(() => {
         const handleBeforeInstallPrompt = (e) => {
@@ -341,44 +381,33 @@ const TripDashboard = ({ tripId, onBack }) => {
 
     // --- FIREBASE LISTENERS ---
     useEffect(() => {
-        if (!window.db) {
-            console.error("Firebase not initialized");
-            setIsLoading(false);
-            return;
-        }
-
+        // ... (Firebase listeners) ...
         const unsubItinerary = getDBCollection("itinerary").onSnapshot(snapshot => {
             const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setItinerary(data);
         });
-
         const unsubTransport = getDBCollection("transport").onSnapshot(snapshot => {
             const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setTransport(data);
         });
-
         const unsubExpenses = getDBCollection("expenses").onSnapshot(snapshot => {
             const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setExpenses(data);
             setIsLoading(false);
         });
-
         const unsubDays = getDBCollection("days").orderBy("data").onSnapshot(snapshot => {
             const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setDays(data);
         });
-
         const unsubBackpack = getDBCollection("backpack").onSnapshot(snapshot => {
             const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setBackpack(data);
         });
 
-        // Settings are now the trip doc itself, passed as prop or fetched if we want real-time updates of title
+        // Settings
         const unsubSettings = db.collection("trips").doc(tripId).onSnapshot(doc => {
             if (doc.exists) {
-                // Merge doc data into tripDetails, ensuring we don't overwrite if not present
-                const data = doc.data();
-                setTripDetails(prev => ({ ...prev, ...data }));
+                setTripDetails(prev => ({ ...prev, ...doc.data() }));
             }
         });
 
@@ -392,13 +421,261 @@ const TripDashboard = ({ tripId, onBack }) => {
         };
     }, [tripId]);
 
+    // --- GOOGLE DRIVE INTEGRATION ---
+    useEffect(() => {
+        const initGapi = () => {
+            if (typeof gapi === 'undefined') {
+                setTimeout(initGapi, 500); // Retry if script not loaded yet
+                return;
+            }
+            gapi.load('client', async () => {
+                try {
+                    await gapi.client.init({
+                        apiKey: API_KEY,
+                    });
+                    await gapi.client.load('drive', 'v3');
+                    // Load oauth2 for userinfo
+                    await gapi.client.load('oauth2', 'v2');
+                    setGapiInited(true);
+
+                    // --- CHECK FOR STORED TOKEN ---
+                    // Updated keys for "full" scope to force re-auth
+                    const storedToken = localStorage.getItem("google_access_token_full");
+                    const storedExpiry = localStorage.getItem("google_token_expiry_full");
+                    const storedEmail = localStorage.getItem("google_user_email");
+                    const now = Date.now();
+
+                    if (storedToken && storedExpiry && now < parseInt(storedExpiry)) {
+                        console.log("Restoring Google Token from Storage...");
+                        gapi.client.setToken({ access_token: storedToken });
+                        setDriveConnected(true);
+                        if (storedEmail) setUserEmail(storedEmail);
+                        // Trigger load immediately as we are "connected"
+                        // But need to ensure state updates first or call directly.
+                        // Ideally we wait for 'drive' lib which we just loaded.
+                        // We can call loadDriveFiles() in a separate useEffect dependent on driveConnected
+                        // or just call it here (safest if we define it outside or use a ref, 
+                        // but since it's defined in component scope, we can call it if available, 
+                        // BUT loadDriveFiles depends on gapi client which exists now).
+                        // Let's rely on a separate effect to trigger load when driveConnected becomes true?
+                        // Actually, the simplest way is to just call it here after a tiny delay or directly since drive is loaded.
+                    } else {
+                        console.log("No valid Google Token found.");
+                        localStorage.removeItem("google_access_token_full");
+                        localStorage.removeItem("google_token_expiry_full");
+                        localStorage.removeItem("google_user_email");
+                        // Cleanup old keys if any
+                        localStorage.removeItem("google_access_token");
+                        localStorage.removeItem("google_token_expiry");
+                    }
+
+                } catch (error) {
+                    console.error("GAPI Init Error:", error);
+                    alert("Errore inizializzazione Google Drive: " + JSON.stringify(error));
+                }
+            });
+        };
+
+        const initGis = () => {
+            if (typeof google === 'undefined') {
+                setTimeout(initGis, 500); // Retry if script not loaded yet
+                return;
+            }
+            const client = google.accounts.oauth2.initTokenClient({
+                client_id: CLIENT_ID,
+                scope: SCOPES,
+                callback: (tokenResponse) => {
+                    if (tokenResponse && tokenResponse.access_token) {
+                        const expiresIn = tokenResponse.expires_in; // seconds
+                        const expiryTime = Date.now() + (expiresIn * 1000);
+
+                        localStorage.setItem("google_access_token_full", tokenResponse.access_token);
+                        localStorage.setItem("google_token_expiry_full", expiryTime);
+
+                        setDriveConnected(true);
+                        loadDriveFiles(); // Initial load after connect
+                        fetchUserProfile();
+                    }
+                },
+            });
+            setTokenClient(client);
+            setGisInited(true);
+        };
+
+        if (tripDetails.title) {
+            initGapi();
+            initGis();
+        }
+    }, [tripDetails.title]);
+
+    // --- EFFECT TO LOAD FILES WHEN CONNECTED ---
+    useEffect(() => {
+        if (driveConnected && gapiInited) {
+            loadDriveFiles();
+        }
+    }, [driveConnected, gapiInited]);
+
+    const fetchUserProfile = async () => {
+        try {
+            // Requires: await gapi.client.load('oauth2', 'v2'); in initGapi
+            const userInfo = await gapi.client.oauth2.userinfo.get();
+            const email = userInfo.result.email;
+            console.log("User Email fetched:", email);
+            setUserEmail(email);
+            localStorage.setItem("google_user_email", email);
+        } catch (error) {
+            console.error("Error fetching user profile:", error);
+            // If we can't get the profile (likely scope missing on old token), force a disconnect so user re-auths
+            handleDisconnectDrive();
+        }
+    };
+
+    const handleDisconnectDrive = () => {
+        setDriveConnected(false);
+        setDriveFiles([]);
+        setUserEmail(null);
+        localStorage.removeItem("google_access_token_full");
+        localStorage.removeItem("google_token_expiry_full");
+        localStorage.removeItem("google_user_email");
+        // Also legacy keys
+        localStorage.removeItem("google_access_token");
+        localStorage.removeItem("google_token_expiry");
+    };
+
+    // --- DRIVE HELPERS ---
+    const findOrCreateFolder = async (folderName, parentId = 'root', searchGlobal = false) => {
+        // 1. Precise search in parent (Folder OR Shortcut)
+        // Note: parenthesis are important for OR logic
+        const queryStrict = `(mimeType='application/vnd.google-apps.folder' or mimeType='application/vnd.google-apps.shortcut') and name='${folderName}' and '${parentId}' in parents and trashed=false`;
+
+        let response = await gapi.client.drive.files.list({
+            q: queryStrict,
+            fields: 'files(id, name, mimeType, shortcutDetails)',
+            spaces: 'drive',
+        });
+
+        if (response.result.files.length > 0) {
+            const file = response.result.files[0];
+            if (file.mimeType === 'application/vnd.google-apps.shortcut' && file.shortcutDetails) {
+                console.log(`Found shortcut for ${folderName}, resolving to target: ${file.shortcutDetails.targetId}`);
+                return file.shortcutDetails.targetId;
+            }
+            return file.id;
+        }
+
+        // 2. Fallback: Global search (Folder OR Shortcut)
+        // This handles cases where it's shared directly (no parent folder) OR is a shortcut elsewhere
+        if (searchGlobal) {
+            const queryGlobal = `(mimeType='application/vnd.google-apps.folder' or mimeType='application/vnd.google-apps.shortcut') and name='${folderName}' and trashed=false`;
+            response = await gapi.client.drive.files.list({
+                q: queryGlobal,
+                fields: 'files(id, name, mimeType, shortcutDetails)',
+                spaces: 'drive',
+            });
+
+            if (response.result.files.length > 0) {
+                const file = response.result.files[0];
+                if (file.mimeType === 'application/vnd.google-apps.shortcut' && file.shortcutDetails) {
+                    console.log(`Found global shortcut for ${folderName}, resolving to target: ${file.shortcutDetails.targetId}`);
+                    return file.shortcutDetails.targetId;
+                }
+                return file.id;
+            }
+        }
+
+        // 3. Create if not found anywhere (strictly in parent)
+        const fileMetadata = {
+            'name': folderName,
+            'mimeType': 'application/vnd.google-apps.folder',
+            'parents': [parentId]
+        };
+        const file = await gapi.client.drive.files.create({
+            resource: fileMetadata,
+            fields: 'id'
+        });
+        return file.result.id;
+    };
+
+    const getTargetFolderId = async () => {
+        // Path: Applicazioni / Trip Planner / <TripTitle>
+        // Allow "Applicazioni" to be found globally (shared folder scenario)
+        const appFolderId = await findOrCreateFolder("Applicazioni", 'root', true);
+        const plannerFolderId = await findOrCreateFolder("Trip Planner", appFolderId);
+        const tripFolderId = await findOrCreateFolder(tripDetails.title, plannerFolderId);
+        return tripFolderId;
+    };
+
+    const loadDriveFiles = async () => {
+        try {
+            const folderId = await getTargetFolderId();
+            const response = await gapi.client.drive.files.list({
+                q: `'${folderId}' in parents and trashed=false`,
+                fields: 'files(id, name, webViewLink, iconLink, thumbnailLink)',
+            });
+            setDriveFiles(response.result.files);
+        } catch (err) {
+            console.error("Error loading drive files", err);
+        }
+    };
+
+    const handleConnectDrive = () => {
+        if (tokenClient) {
+            tokenClient.requestAccessToken({ prompt: '' });
+        }
+    };
+
+    const handleUploadFile = async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        setUploading(true);
+        try {
+            const folderId = await getTargetFolderId();
+
+            const metadata = {
+                'name': file.name,
+                'parents': [folderId]
+            };
+
+            const accessToken = gapi.auth.getToken().access_token;
+            const form = new FormData();
+            form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+            form.append('file', file);
+
+            await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+                method: 'POST',
+                headers: new Headers({ 'Authorization': 'Bearer ' + accessToken }),
+                body: form
+            });
+
+            await loadDriveFiles();
+        } catch (error) {
+            console.error("Upload error", error);
+            alert("Errore durante il caricamento");
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const handleDeleteDriveFile = async (fileId) => {
+        requestConfirm("Elimina File", "Sei sicuro di voler eliminare questo file da Drive?", async () => {
+            try {
+                await gapi.client.drive.files.delete({ fileId: fileId });
+                setDriveFiles(prev => prev.filter(f => f.id !== fileId));
+            } catch (err) {
+                console.error("Delete error", err);
+            }
+        });
+    };
+
     // --- STATS LOGIC ---
     // --- STATS LOGIC ---
-    const EXCHANGE_RATE = 1.15;
+    const TRIP_CURRENCY = tripDetails.currencySymbol || "£";
+    const EXCHANGE_RATE = parseFloat(tripDetails.exchangeRate) || 1.15;
 
     const parseCost = (costStr) => {
-        if (!costStr) return { amount: 0, currency: "£" };
-        const currency = costStr.includes("€") ? "€" : "£";
+        if (!costStr) return { amount: 0, currency: TRIP_CURRENCY };
+        const currency = costStr.includes("€") ? "€" : TRIP_CURRENCY;
         const amount = parseFloat(costStr.replace(/[^0-9.]/g, "")) || 0;
         return { amount, currency };
     };
@@ -409,22 +686,18 @@ const TripDashboard = ({ tripId, onBack }) => {
             return currency === "€" ? acc + amount : acc;
         }, 0);
 
-    const paidGBP = expenses.filter(e => e.valuta === "£" && e.pagato).reduce((acc, curr) => acc + Number(curr.costo), 0)
+    const paidForeign = expenses.filter(e => e.valuta === TRIP_CURRENCY && e.pagato).reduce((acc, curr) => acc + Number(curr.costo), 0)
         + transport.filter(t => t.pagato).reduce((acc, curr) => {
             const { amount, currency } = parseCost(curr.costo);
-            return currency === "£" ? acc + amount : acc;
+            return currency === TRIP_CURRENCY ? acc + amount : acc;
         }, 0);
 
-    const totalPaidEUR = paidEUR + (paidGBP * EXCHANGE_RATE);
+    const totalPaidEUR = paidEUR + (paidForeign * EXCHANGE_RATE);
 
-    const toPayGBP = expenses.filter(e => e.valuta === "£" && !e.pagato).reduce((acc, curr) => acc + Number(curr.costo), 0)
+    const toPayForeign = expenses.filter(e => e.valuta === TRIP_CURRENCY && !e.pagato).reduce((acc, curr) => acc + Number(curr.costo), 0)
         + transport.filter(t => !t.pagato).reduce((acc, curr) => {
             const { amount, currency } = parseCost(curr.costo);
-            // Assuming unpaid Euro transport is rare or dealt with same way, but usually we care about currency used.
-            // If it's Euro and unpaid, strictly speaking it's not GBP to pay.
-            // But if we want a global "to pay" maybe we should separate or convert.
-            // For now, let's stick to GBP for "Previsto (GBP)" as requested by label, so only sum £.
-            return currency === "£" ? acc + amount : acc;
+            return currency === TRIP_CURRENCY ? acc + amount : acc;
         }, 0);
 
     // --- OPTIMISTIC UPDATES ---
@@ -580,7 +853,7 @@ const TripDashboard = ({ tripId, onBack }) => {
 
         setActiveModal(null);
         setEditingId(null);
-        setNewItemExpense({ item: "", costo: "", valuta: "£", pagato: false, prenotato: false, chi: "", note: "" });
+        setNewItemExpense({ item: "", costo: "", valuta: tripDetails.currencySymbol || "£", pagato: false, prenotato: false, chi: "", note: "" });
     };
 
     const openEditExpense = (item) => {
@@ -771,6 +1044,33 @@ const TripDashboard = ({ tripId, onBack }) => {
         setActiveModal('tripDetails');
     };
 
+    // --- DOCUMENTS HANDLERS ---
+    const handleAddDocument = async () => {
+        if (!newItemDocument.nome || !newItemDocument.url) return;
+
+        if (editingId) {
+            await getDBCollection("documents").doc(editingId).update(newItemDocument);
+        } else {
+            await getDBCollection("documents").add(newItemDocument);
+        }
+
+        setActiveModal(null);
+        setEditingId(null);
+        setNewItemDocument({ nome: "", url: "", note: "" });
+    };
+
+    const handleDeleteDocument = async (id) => {
+        requestConfirm("Elimina Documento", "Sei sicuro di voler eliminare questo documento?", async () => {
+            await getDBCollection("documents").doc(id).delete();
+        });
+    };
+
+    const openEditDocument = (item) => {
+        setNewItemDocument(item);
+        setEditingId(item.id);
+        setActiveModal('documents');
+    };
+
     return (
         <div className="max-w-md mx-auto min-h-screen bg-gray-50 flex flex-col relative sm:max-w-xl md:max-w-3xl">
 
@@ -815,9 +1115,9 @@ const TripDashboard = ({ tripId, onBack }) => {
                     <span className="text-[10px] text-gray-400">€ {(totalPaidEUR / 2).toFixed(2)} a testa</span>
                 </Card>
                 <Card className="flex flex-col items-center justify-center py-3 border-b-4 border-b-red-500 shadow-md">
-                    <span className="text-xs text-gray-500 uppercase font-bold tracking-wider">Previsto (GBP)</span>
-                    <span className="text-xl font-bold text-gray-800">£ {toPayGBP.toFixed(2)}</span>
-                    <span className="text-[10px] text-gray-400">£ {(toPayGBP / 2).toFixed(2)} a testa</span>
+                    <span className="text-xs text-gray-500 uppercase font-bold tracking-wider">Previsto ({TRIP_CURRENCY})</span>
+                    <span className="text-xl font-bold text-gray-800">{TRIP_CURRENCY} {toPayForeign.toFixed(2)}</span>
+                    <span className="text-[10px] text-gray-400">{TRIP_CURRENCY} {(toPayForeign / 2).toFixed(2)} a testa</span>
                 </Card>
             </div>
 
@@ -834,25 +1134,26 @@ const TripDashboard = ({ tripId, onBack }) => {
                         onClick={() => setActiveTab("attractions")}
                         className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${activeTab === 'attractions' ? 'bg-red-50 text-red-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
                     >
-                        Attrazioni
+                        Luoghi & Mezzi
                     </button>
                     <button
                         onClick={() => setActiveTab("expenses")}
                         className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${activeTab === 'expenses' ? 'bg-red-50 text-red-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
                     >
-                        Spese
+                        Spese ({tripDetails.currencySymbol || "£"})
                     </button>
-                    <button
-                        onClick={() => setActiveTab("transport")}
-                        className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${activeTab === 'transport' ? 'bg-red-50 text-red-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
-                    >
-                        Mezzi
-                    </button>
+                    {/* Transport removed from main nav */}
                     <button
                         onClick={() => setActiveTab("backpack")}
                         className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${activeTab === 'backpack' ? 'bg-red-50 text-red-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
                     >
                         Zaino
+                    </button>
+                    <button
+                        onClick={() => setActiveTab("documents")}
+                        className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${activeTab === 'documents' ? 'bg-red-50 text-red-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                    >
+                        Documenti
                     </button>
                 </div>
             </div>
@@ -860,155 +1161,243 @@ const TripDashboard = ({ tripId, onBack }) => {
             {/* Main Content Area */}
             <div className="flex-1 px-4 pb-24 overflow-y-auto scroller">
 
-                {/* ATTRACTIONS TAB (Old Itinerary) */}
+                {/* COMBINED TAB: ATTRACTIONS + TRANSPORT */}
                 {activeTab === "attractions" && (
                     <div className="space-y-4">
-                        {/* Compact Header Filters */}
-                        <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 space-y-3">
-                            {/* 1. Search Bar */}
-                            <div className="bg-gray-50 p-2 rounded-lg flex items-center gap-2 border border-gray-100">
-                                <Search size={18} className="text-gray-400" />
-                                <input
-                                    type="text"
-                                    placeholder="Cerca attrazione..."
-                                    className="w-full text-sm bg-transparent outline-none text-gray-700 placeholder-gray-400"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                />
-                                {searchQuery && (
-                                    <button onClick={() => setSearchQuery("")} className="text-gray-400 hover:text-gray-600">
-                                        <X size={16} />
-                                    </button>
-                                )}
-                            </div>
 
-                            {/* 2. Status & Sort Row */}
-                            <div className="flex justify-between items-center">
-                                <div className="flex bg-gray-100 p-1 rounded-lg">
-                                    {["Tutti", "Da Visitare", "Visitati"].map(status => (
-                                        <button
-                                            key={status}
-                                            onClick={() => setFilterStatusItinerary(status)}
-                                            className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${filterStatusItinerary === status ? 'bg-white text-black shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                                        >
-                                            {status}
-                                        </button>
-                                    ))}
-                                </div>
+                        {/* Unified Header: Switcher + Filters */}
+                        <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 space-y-3">
+
+                            {/* Sub-Navigation Switcher */}
+                            <div className="flex bg-gray-100 p-1 rounded-lg">
                                 <button
-                                    onClick={() => setSortOrder(prev => prev === 'alpha' ? 'default' : 'alpha')}
-                                    className={`p-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors ${sortOrder === 'alpha' ? 'bg-blue-50 text-blue-600' : 'text-gray-400 hover:bg-gray-50'}`}
+                                    onClick={() => setPlacesViewMode("places")}
+                                    className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${placesViewMode === 'places' ? 'bg-white text-black shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                                 >
-                                    {sortOrder === 'alpha' ? 'A-Z' : 'Default'}
+                                    <span className="flex items-center justify-center gap-2"><MapPin size={14} /> Luoghi</span>
+                                </button>
+                                <button
+                                    onClick={() => setPlacesViewMode("transport")}
+                                    className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${placesViewMode === 'transport' ? 'bg-white text-black shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                >
+                                    <span className="flex items-center justify-center gap-2"><Train size={14} /> Mezzi / Spostamenti</span>
                                 </button>
                             </div>
 
-                            {/* 3. Category Filters */}
-                            <div className="flex gap-2 overflow-x-auto no-scrollbar pt-1 border-t border-gray-50">
-                                {categories.map(cat => (
-                                    <button
-                                        key={cat}
-                                        onClick={() => setFilterCat(cat)}
-                                        className={`px-3 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap border transition-colors ${filterCat === cat ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'}`}
-                                    >
-                                        {cat}
-                                    </button>
-                                ))}
-                            </div>
+                            {/* Filters (Shown only for PLACES) */}
+                            {placesViewMode === "places" && (
+                                <>
+                                    <div className="h-px bg-gray-50"></div> {/* Divider */}
+
+                                    {/* 1. Search Bar */}
+                                    <div className="bg-gray-50 p-2 rounded-lg flex items-center gap-2 border border-gray-100">
+                                        <Search size={18} className="text-gray-400" />
+                                        <input
+                                            type="text"
+                                            placeholder="Cerca attrazione..."
+                                            className="w-full text-sm bg-transparent outline-none text-gray-700 placeholder-gray-400"
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                        />
+                                        {searchQuery && (
+                                            <button onClick={() => setSearchQuery("")} className="text-gray-400 hover:text-gray-600">
+                                                <X size={16} />
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {/* 2. Status & Sort Row */}
+                                    <div className="flex justify-between items-center">
+                                        <div className="flex bg-gray-100 p-1 rounded-lg">
+                                            {["Tutti", "Da Visitare", "Visitati"].map(status => (
+                                                <button
+                                                    key={status}
+                                                    onClick={() => setFilterStatusItinerary(status)}
+                                                    className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${filterStatusItinerary === status ? 'bg-white text-black shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                                >
+                                                    {status}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <button
+                                            onClick={() => setSortOrder(prev => prev === 'alpha' ? 'default' : 'alpha')}
+                                            className={`p-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors ${sortOrder === 'alpha' ? 'bg-blue-50 text-blue-600' : 'text-gray-400 hover:bg-gray-50'}`}
+                                        >
+                                            {sortOrder === 'alpha' ? 'A-Z' : 'Default'}
+                                        </button>
+                                    </div>
+
+                                    {/* 3. Category Filters */}
+                                    <div className="flex gap-2 overflow-x-auto no-scrollbar pt-1 border-t border-gray-50">
+                                        {categories.map(cat => (
+                                            <button
+                                                key={cat}
+                                                onClick={() => setFilterCat(cat)}
+                                                className={`px-3 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap border transition-colors ${filterCat === cat ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'}`}
+                                            >
+                                                {cat}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
                         </div>
 
-                        {/* List */}
-                        <Button variant="outline" onClick={() => { setEditingId(null); setNewItemItinerary({ nome: "", categoria: "Museo", quartiere: "", durata: "", orari: "", eccezioni: "", img: "", mapEmbed: "" }); setActiveModal('itinerary'); }} icon={Plus}>
-                            Aggiungi Attrazione
-                        </Button>
-                        {filteredItinerary.map(place => (
-                            <Card key={place.id} onClick={() => setViewingItem(place)} noPadding className="relative overflow-hidden transition-all hover:shadow-md group flex flex-col cursor-pointer">
-                                {place.visited && (
-                                    <div className="absolute inset-0 bg-white/60 z-30 flex items-center justify-center backdrop-blur-[1px] transition-opacity pointer-events-none">
-                                        <div className="bg-green-100/90 text-green-700 px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1 shadow-sm border border-green-200">
-                                            <CheckCircle size={16} /> Visitato
-                                        </div>
-                                    </div>
-                                )}
+                        {/* --- VIEW: PLACES (List Only) --- */}
+                        {placesViewMode === "places" && (
+                            <div className="space-y-4">
+                                {/* List Items */}
+                                <Button variant="outline" onClick={() => { setEditingId(null); setNewItemItinerary({ nome: "", categoria: "Museo", quartiere: "", durata: "", orari: "", eccezioni: "", img: "", mapEmbed: "" }); setActiveModal('itinerary'); }} icon={Plus}>
+                                    Aggiungi Attrazione
+                                </Button>
+                                {filteredItinerary.map(place => (
+                                    <Card key={place.id} onClick={() => setViewingItem(place)} noPadding className="relative overflow-hidden transition-all hover:shadow-md group flex flex-col cursor-pointer">
+                                        {place.visited && (
+                                            <div className="absolute inset-0 bg-white/60 z-30 flex items-center justify-center backdrop-blur-[1px] transition-opacity pointer-events-none">
+                                                <div className="bg-green-100/90 text-green-700 px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1 shadow-sm border border-green-200">
+                                                    <CheckCircle size={16} /> Visitato
+                                                </div>
+                                            </div>
+                                        )}
 
-                                {/* Image Section */}
-                                <div className="relative w-full h-48 bg-gray-200 overflow-hidden group-hover:brightness-[0.98] transition-all">
-                                    {place.img ? (
-                                        <img src={place.img} alt={place.nome} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-                                    ) : (
-                                        <div className="w-full h-full flex flex-col items-center justify-center text-gray-300 bg-gray-100">
-                                            <MapPin size={48} className="opacity-20 translate-y-2" />
-                                            {/* Optional: Pattern or gradient could go here */}
-                                        </div>
-                                    )}
+                                        {/* Image Section */}
+                                        <div className="relative w-full h-48 bg-gray-200 overflow-hidden group-hover:brightness-[0.98] transition-all">
+                                            {place.img ? (
+                                                <img src={place.img} alt={place.nome} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                                            ) : (
+                                                <div className="w-full h-full flex flex-col items-center justify-center text-gray-300 bg-gray-100">
+                                                    <MapPin size={48} className="opacity-20 translate-y-2" />
+                                                    {/* Optional: Pattern or gradient could go here */}
+                                                </div>
+                                            )}
 
-                                    {/* Overlay Gradient for Text readability if we put text on img (not doing for now, but good for style) */}
-                                    {/* <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" /> */}
+                                            {/* Floating Actions (Top Right) */}
+                                            <div className="absolute top-2 right-2 flex gap-1 z-20 opacity-90">
+                                                <button onClick={(e) => { e.stopPropagation(); openEditItinerary(place); }} className="bg-white/90 text-gray-600 hover:text-blue-600 p-1.5 rounded-lg shadow-sm backdrop-blur-sm hover:bg-white transition-all transform hover:scale-105">
+                                                    <Edit size={16} />
+                                                </button>
+                                                <button onClick={(e) => { e.stopPropagation(); handleDeleteItinerary(place.id); }} className="bg-white/90 text-gray-600 hover:text-red-600 p-1.5 rounded-lg shadow-sm backdrop-blur-sm hover:bg-white transition-all transform hover:scale-105">
+                                                    <Trash size={16} />
+                                                </button>
+                                            </div>
 
-                                    {/* Floating Actions (Top Right) */}
-                                    <div className="absolute top-2 right-2 flex gap-1 z-20 opacity-90">
-                                        <button onClick={(e) => { e.stopPropagation(); openEditItinerary(place); }} className="bg-white/90 text-gray-600 hover:text-blue-600 p-1.5 rounded-lg shadow-sm backdrop-blur-sm hover:bg-white transition-all transform hover:scale-105">
-                                            <Edit size={16} />
-                                        </button>
-                                        <button onClick={(e) => { e.stopPropagation(); handleDeleteItinerary(place.id); }} className="bg-white/90 text-gray-600 hover:text-red-600 p-1.5 rounded-lg shadow-sm backdrop-blur-sm hover:bg-white transition-all transform hover:scale-105">
-                                            <Trash size={16} />
-                                        </button>
-                                    </div>
-
-                                    {/* Category Badge (Top Left) */}
-                                    <div className="absolute top-3 left-3 z-20">
-                                        <Badge type={place.categoria}>{place.categoria}</Badge>
-                                    </div>
-                                </div>
-
-                                {/* Content Section */}
-                                <div className="p-4 flex flex-col flex-1 relative bg-white">
-
-                                    {/* Header: Title & Location */}
-                                    <div className="flex justify-between items-start mb-3">
-                                        <div className="flex-1 min-w-0 pr-2">
-                                            <h3 className="font-bold text-gray-800 text-xl leading-tight truncate">{place.nome}</h3>
-                                            <div className="flex items-center gap-1 text-gray-500 text-xs mt-1 font-medium">
-                                                <MapPin size={12} className="text-gray-400" />
-                                                <span>{place.quartiere}</span>
+                                            {/* Category Badge (Top Left) */}
+                                            <div className="absolute top-3 left-3 z-20">
+                                                <Badge type={place.categoria}>{place.categoria}</Badge>
                                             </div>
                                         </div>
 
-                                        {/* Actions Row (Secondary/Common) */}
-                                        <div className="flex items-center gap-1 shrink-0">
-                                            <button onClick={(e) => { e.stopPropagation(); toggleVisit(place.id, place.visited); }} className={`transition-all p-1.5 rounded-full ${place.visited ? 'text-green-600 bg-green-50 scale-110' : 'text-gray-300 hover:text-green-500 hover:bg-green-50'}`} title={place.visited ? "Segna come non visitato" : "Segna come visitato"}>
-                                                <CheckCircle size={24} />
-                                            </button>
-                                        </div>
-                                    </div>
+                                        {/* Content Section */}
+                                        <div className="p-4 flex flex-col flex-1 relative bg-white">
 
-                                    {/* Info Grid */}
-                                    <div className="grid grid-cols-2 gap-2 text-xs mt-auto">
-                                        <div className="bg-gray-50 p-2 rounded-lg border border-gray-100/50">
-                                            <span className="block text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-0.5">Orari</span>
-                                            <span className="font-semibold text-gray-700 truncate block" title={place.orari}>{place.orari || "//"}</span>
-                                        </div>
-                                        <div className="bg-gray-50 p-2 rounded-lg border border-gray-100/50">
-                                            <span className="block text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-0.5">Durata</span>
-                                            <span className="font-semibold text-gray-700 truncate block">{place.durata || "//"}</span>
-                                        </div>
-                                    </div>
+                                            {/* Header: Title & Location */}
+                                            <div className="flex justify-between items-start mb-3">
+                                                <div className="flex-1 min-w-0 pr-2">
+                                                    <h3 className="font-bold text-gray-800 text-xl leading-tight truncate">{place.nome}</h3>
+                                                    <div className="flex items-center gap-1 text-gray-500 text-xs mt-1 font-medium">
+                                                        <MapPin size={12} className="text-gray-400" />
+                                                        <span>{place.quartiere}</span>
+                                                    </div>
+                                                </div>
 
-                                    {/* Exceptions / Warnings */}
-                                    {place.eccezioni && (
-                                        <div className="mt-2 pt-2 border-t border-gray-100">
-                                            <p className="text-xs text-rose-600 font-medium flex items-center gap-1.5">
-                                                <AlertCircle size={12} className="shrink-0" />
-                                                <span className="truncate">{place.eccezioni}</span>
-                                            </p>
-                                        </div>
-                                    )}
-                                </div>
-                            </Card>
-                        ))}
+                                                {/* Actions Row (Secondary/Common) */}
+                                                <div className="flex items-center gap-1 shrink-0">
+                                                    <button onClick={(e) => { e.stopPropagation(); toggleVisit(place.id, place.visited); }} className={`transition-all p-1.5 rounded-full ${place.visited ? 'text-green-600 bg-green-50 scale-110' : 'text-gray-300 hover:text-green-500 hover:bg-green-50'}`} title={place.visited ? "Segna come non visitato" : "Segna come visitato"}>
+                                                        <CheckCircle size={24} />
+                                                    </button>
+                                                </div>
+                                            </div>
 
+                                            {/* Info Grid */}
+                                            <div className="grid grid-cols-2 gap-2 text-xs mt-auto">
+                                                <div className="bg-gray-50 p-2 rounded-lg border border-gray-100/50">
+                                                    <span className="block text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-0.5">Orari</span>
+                                                    <span className="font-semibold text-gray-700 truncate block" title={place.orari}>{place.orari || "//"}</span>
+                                                </div>
+                                                <div className="bg-gray-50 p-2 rounded-lg border border-gray-100/50">
+                                                    <span className="block text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-0.5">Durata</span>
+                                                    <span className="font-semibold text-gray-700 truncate block">{place.durata || "//"}</span>
+                                                </div>
+                                            </div>
+
+                                            {/* Exceptions / Warnings */}
+                                            {place.eccezioni && (
+                                                <div className="mt-2 pt-2 border-t border-gray-100">
+                                                    <p className="text-xs text-rose-600 font-medium flex items-center gap-1.5">
+                                                        <AlertCircle size={12} className="shrink-0" />
+                                                        <span className="truncate">{place.eccezioni}</span>
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </Card>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* --- VIEW: TRANSPORT (Moved here) --- */}
+                        {placesViewMode === "transport" && (
+                            <div className="space-y-4">
+                                <Button variant="blue" onClick={() => setActiveModal('transport')} icon={Plus}>
+                                    Aggiungi Viaggio
+                                </Button>
+                                {transport.map(trip => (
+                                    <Card key={trip.id} className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
+                                        <div className="flex justify-between items-start mb-3">
+                                            <div className="flex items-center gap-2 text-blue-800 font-bold">
+                                                <Train size={18} />
+                                                <span>{trip.dettaglio}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <div className="flex gap-1 ml-1">
+                                                    <button onClick={() => openEditTransport(trip)} className="text-gray-300 hover:text-blue-500 p-1 rounded-full"><Edit size={16} /></button>
+                                                    <button onClick={() => handleDeleteTransport(trip.id)} className="text-gray-300 hover:text-red-500 p-1 rounded-full"><Trash size={16} /></button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-4 mb-4">
+                                            <div className="text-center min-w-[60px] bg-blue-50/50 p-2 rounded-lg">
+                                                <div className="text-xl font-bold text-blue-900">{trip.ora}</div>
+                                                <div className="text-[10px] bg-white px-1 rounded text-blue-400 font-bold uppercase tracking-wide">{trip.data.split('/')[0]} Feb</div>
+                                            </div>
+                                            <div className="flex-1 flex flex-col gap-1 pl-2 relative">
+                                                {/* Line visualization */}
+                                                <div className="absolute left-[-10px] top-2 bottom-2 w-0.5 bg-gray-200"></div>
+                                                <div className="absolute left-[-13px] top-1.5 w-2 h-2 rounded-full border-2 border-gray-300 bg-white"></div>
+
+                                                <div className="text-sm font-bold text-gray-800">{trip.partenza}</div>
+                                                <div className="text-sm font-bold text-gray-800 mt-2">{trip.arrivo}</div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex justify-between items-center pt-3 border-t border-gray-100">
+                                            <div className="flex flex-wrap gap-2">
+                                                <button
+                                                    onClick={() => toggleTransportBooked(trip.id, trip.prenotato)}
+                                                    className={`text-[10px] font-bold px-2 py-1 rounded-md border transition-all flex items-center gap-1 ${trip.prenotato ? 'bg-purple-100 text-purple-700 border-purple-200' : 'bg-gray-50 text-gray-400 border-gray-200 hover:border-purple-300'}`}
+                                                >
+                                                    {trip.prenotato ? '✓ Prenotato' : '○ Da Prenotare'}
+                                                </button>
+                                                <button
+                                                    onClick={() => toggleTransportPaid(trip.id, trip.pagato)}
+                                                    className={`text-[10px] font-bold px-2 py-1 rounded-md border transition-all flex items-center gap-1 ${trip.pagato ? 'bg-green-100 text-green-700 border-green-200' : 'bg-gray-50 text-gray-400 border-gray-200 hover:border-green-300'}`}
+                                                >
+                                                    {trip.pagato ? '✓ Pagato' : '○ Da Pagare'}
+                                                </button>
+                                            </div>
+                                            <div className="text-right">
+                                                <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Costo</span>
+                                                <span className="font-bold text-gray-900">{trip.costo}</span>
+                                            </div>
+                                        </div>
+                                    </Card>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
+
 
                 {/* EXPENSES TAB */}
                 {/* EXPENSES TAB */}
@@ -1035,7 +1424,7 @@ const TripDashboard = ({ tripId, onBack }) => {
                             </button>
                         </div>
 
-                        <Button variant="green" onClick={() => setActiveModal('expenses')} icon={Plus}>
+                        <Button variant="green" onClick={() => { setNewItemExpense(prev => ({ ...prev, valuta: tripDetails.currencySymbol || "£" })); setActiveModal('expenses'); }} icon={Plus}>
                             Aggiungi Spesa
                         </Button>
 
@@ -1082,76 +1471,10 @@ const TripDashboard = ({ tripId, onBack }) => {
                             </Card>
                         ))}
 
-
-                        <div className="mt-6 bg-amber-50 border border-amber-100 rounded-xl p-4 text-sm text-amber-900 shadow-sm">
-                            <p className="font-bold mb-1 flex items-center gap-2"><div className="w-2 h-2 bg-amber-500 rounded-full"></div>Info Budget</p>
-                            <p className="opacity-80 text-xs">
-                                I costi in sterline (£) sono indicativi.
-                            </p>
-                        </div>
                     </div>
                 )}
 
-                {/* TRANSPORT TAB */}
-                {activeTab === "transport" && (
-                    <div className="space-y-4">
-                        <Button variant="blue" onClick={() => setActiveModal('transport')} icon={Plus}>
-                            Aggiungi Viaggio
-                        </Button>
-                        {transport.map(trip => (
-                            <Card key={trip.id} className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
-                                <div className="flex justify-between items-start mb-3">
-                                    <div className="flex items-center gap-2 text-blue-800 font-bold">
-                                        <Train size={18} />
-                                        <span>{trip.dettaglio}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <div className="flex gap-1 ml-1">
-                                            <button onClick={() => openEditTransport(trip)} className="text-gray-300 hover:text-blue-500 p-1 rounded-full"><Edit size={16} /></button>
-                                            <button onClick={() => handleDeleteTransport(trip.id)} className="text-gray-300 hover:text-red-500 p-1 rounded-full"><Trash size={16} /></button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center gap-4 mb-4">
-                                    <div className="text-center min-w-[60px] bg-blue-50/50 p-2 rounded-lg">
-                                        <div className="text-xl font-bold text-blue-900">{trip.ora}</div>
-                                        <div className="text-[10px] bg-white px-1 rounded text-blue-400 font-bold uppercase tracking-wide">{trip.data.split('/')[0]} Feb</div>
-                                    </div>
-                                    <div className="flex-1 flex flex-col gap-1 pl-2 relative">
-                                        {/* Line visualization */}
-                                        <div className="absolute left-[-10px] top-2 bottom-2 w-0.5 bg-gray-200"></div>
-                                        <div className="absolute left-[-13px] top-1.5 w-2 h-2 rounded-full border-2 border-gray-300 bg-white"></div>
-
-                                        <div className="text-sm font-bold text-gray-800">{trip.partenza}</div>
-                                        <div className="text-sm font-bold text-gray-800 mt-2">{trip.arrivo}</div>
-                                    </div>
-                                </div>
-
-                                <div className="flex justify-between items-center pt-3 border-t border-gray-100">
-                                    <div className="flex flex-wrap gap-2">
-                                        <button
-                                            onClick={() => toggleTransportBooked(trip.id, trip.prenotato)}
-                                            className={`text-[10px] font-bold px-2 py-1 rounded-md border transition-all flex items-center gap-1 ${trip.prenotato ? 'bg-purple-100 text-purple-700 border-purple-200' : 'bg-gray-50 text-gray-400 border-gray-200 hover:border-purple-300'}`}
-                                        >
-                                            {trip.prenotato ? '✓ Prenotato' : '○ Da Prenotare'}
-                                        </button>
-                                        <button
-                                            onClick={() => toggleTransportPaid(trip.id, trip.pagato)}
-                                            className={`text-[10px] font-bold px-2 py-1 rounded-md border transition-all flex items-center gap-1 ${trip.pagato ? 'bg-green-100 text-green-700 border-green-200' : 'bg-gray-50 text-gray-400 border-gray-200 hover:border-green-300'}`}
-                                        >
-                                            {trip.pagato ? '✓ Pagato' : '○ Da Pagare'}
-                                        </button>
-                                    </div>
-                                    <div className="text-right">
-                                        <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Costo</span>
-                                        <span className="font-bold text-gray-900">{trip.costo}</span>
-                                    </div>
-                                </div>
-                            </Card>
-                        ))}
-                    </div>
-                )}
+                {/* REMOVED STANDALONE TRANSPORT TAB */}
 
                 {activeTab === "itinerary" && (
                     <div className="space-y-6">
@@ -1473,6 +1796,88 @@ const TripDashboard = ({ tripId, onBack }) => {
                     </div>
                 )}
 
+                {/* DOCUMENTS TAB (DRIVE INTEGRATION) */}
+                {activeTab === "documents" && (
+                    <div className="space-y-4">
+                        {!driveConnected ? (
+                            <div className="flex flex-col items-center justify-center py-12 text-center space-y-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
+                                <div className="bg-blue-50 p-4 rounded-full">
+                                    <Database size={32} className="text-blue-600" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-gray-800 text-lg">Google Drive Sync</h3>
+                                    <p className="text-gray-500 text-sm max-w-xs mx-auto">Connetti il tuo account Google per gestire i documenti del viaggio direttamente in una cartella dedicata.</p>
+                                </div>
+                                <button
+                                    onClick={handleConnectDrive}
+                                    disabled={!gapiInited || !gisInited}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl flex items-center gap-2 transition-all shadow-blue-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {(!gapiInited || !gisInited) ? 'Caricamento...' : 'Connetti Google Drive'}
+                                </button>
+                                <p className="text-[10px] text-gray-400">Salva in: Applicazioni / Trip Planner / {tripDetails.title}</p>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="flex justify-between items-center mb-2">
+                                    <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                                        <img src="https://upload.wikimedia.org/wikipedia/commons/1/12/Google_Drive_icon_%282020%29.svg" alt="Drive" className="w-5 h-5" />
+                                        Documenti Drive
+                                    </h3>
+                                    <label className={`bg-black text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-gray-800 transition-colors cursor-pointer flex items-center gap-2 ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                        {uploading ? <RefreshCw size={14} className="animate-spin" /> : <Plus size={14} />}
+                                        {uploading ? 'Caricamento...' : 'Carica File'}
+                                        <input type="file" className="hidden" onChange={handleUploadFile} disabled={uploading} />
+                                    </label>
+                                </div>
+
+                                {driveFiles.length === 0 && (
+                                    <div className="text-center py-12 opacity-50 bg-white rounded-xl border border-dashed border-gray-200">
+                                        <FileText size={48} className="mx-auto mb-2 text-gray-300" />
+                                        <p className="text-gray-400 text-sm">Cartella vuota</p>
+                                        <p className="text-[10px] text-gray-300 mt-1">Carica il tuo primo documento</p>
+                                    </div>
+                                )}
+
+                                <div className="grid grid-cols-1 gap-3">
+                                    {driveFiles.map(file => (
+                                        <Card key={file.id} className="hover:shadow-md transition-shadow group">
+                                            <div className="flex justify-between items-center">
+                                                <div className="flex items-center gap-3 overflow-hidden">
+                                                    <div className="bg-gray-50 p-2 rounded-lg shrink-0">
+                                                        <FileText size={20} className="text-gray-500" />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <h4 className="font-bold text-gray-800 text-sm truncate pr-2" title={file.name}>{file.name}</h4>
+                                                        <a href={`${file.webViewLink}${userEmail ? `&authuser=${userEmail}` : ''}`} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-500 hover:underline flex items-center gap-1">
+                                                            Apri su Drive <LinkIcon size={10} />
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleDeleteDriveFile(file.id)}
+                                                    className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                                                    title="Elimina"
+                                                >
+                                                    <Trash size={16} />
+                                                </button>
+                                            </div>
+                                        </Card>
+                                    ))}
+                                </div>
+                                <div className="text-center mt-4">
+                                    <button onClick={loadDriveFiles} className="text-xs text-blue-500 font-bold hover:underline flex items-center justify-center gap-1 mx-auto">
+                                        <RefreshCw size={12} /> Aggiorna Lista
+                                    </button>
+                                    <button onClick={handleDisconnectDrive} className="mt-4 text-[10px] text-red-400 hover:text-red-600 block mx-auto underline">
+                                        Disconnetti Drive
+                                    </button>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                )}
+
             </div>
 
             {/* MODALS */}
@@ -1553,7 +1958,7 @@ const TripDashboard = ({ tripId, onBack }) => {
                     </InputGroup>
                     <InputGroup label="Valuta">
                         <select className="w-full border-2 border-gray-200 rounded-xl p-3 text-sm bg-white focus:border-green-600 focus:outline-none" value={newItemExpense.valuta} onChange={e => setNewItemExpense({ ...newItemExpense, valuta: e.target.value })}>
-                            <option value="£">Sterline (£)</option>
+                            <option value={tripDetails.currencySymbol || "£"}>{tripDetails.currencySymbol || "£"} (Valuta Viaggio)</option>
                             <option value="€">Euro (€)</option>
                         </select>
                     </InputGroup>
@@ -1579,6 +1984,19 @@ const TripDashboard = ({ tripId, onBack }) => {
                     <input type="text" className="w-full border-2 border-gray-200 rounded-xl p-3 text-sm focus:border-green-600 focus:outline-none" placeholder="Es. Da dividere" value={newItemExpense.note} onChange={e => setNewItemExpense({ ...newItemExpense, note: e.target.value })} />
                 </InputGroup>
                 <Button variant="green" onClick={handleAddExpense} className="mt-4">Salva Spesa</Button>
+            </Modal>
+
+            <Modal isOpen={activeModal === 'documents'} onClose={() => setActiveModal(null)} title={editingId ? "Modifica Documento" : "Nuovo Documento"}>
+                <InputGroup label="Nome Documento">
+                    <input type="text" className="w-full border-2 border-gray-200 rounded-xl p-3 text-sm focus:border-blue-600 focus:outline-none" placeholder="Es. Biglietti Aerei" value={newItemDocument.nome} onChange={e => setNewItemDocument({ ...newItemDocument, nome: e.target.value })} />
+                </InputGroup>
+                <InputGroup label="Link (URL Google Drive)">
+                    <input type="text" className="w-full border-2 border-gray-200 rounded-xl p-3 text-sm focus:border-blue-600 focus:outline-none" placeholder="https://drive.google.com/..." value={newItemDocument.url} onChange={e => setNewItemDocument({ ...newItemDocument, url: e.target.value })} />
+                </InputGroup>
+                <InputGroup label="Note">
+                    <input type="text" className="w-full border-2 border-gray-200 rounded-xl p-3 text-sm focus:border-blue-600 focus:outline-none" placeholder="Es. PIN: 12345" value={newItemDocument.note} onChange={e => setNewItemDocument({ ...newItemDocument, note: e.target.value })} />
+                </InputGroup>
+                <Button variant="blue" onClick={handleAddDocument} className="mt-4">Salva Documento</Button>
             </Modal>
 
             <Modal isOpen={activeModal === 'day'} onClose={() => setActiveModal(null)} title="Nuova Giornata">
@@ -2035,24 +2453,23 @@ const TripDashboard = ({ tripId, onBack }) => {
                         style={{ color: activeTab === 'attractions' ? (tripDetails.color || '#dc2626') : undefined }}
                     >
                         <MapPin size={20} className="mb-1" />
-                        <span className="text-[10px] font-bold">Attrazioni</span>
+                        <span className="text-[10px] font-bold">Luoghi</span>
                     </button>
                     <button
                         onClick={() => setActiveTab("expenses")}
                         className={`flex flex-col items-center p-2 rounded-xl transition-all ${activeTab === 'expenses' ? 'bg-gray-50' : 'text-gray-400 hover:text-gray-600'}`}
                         style={{ color: activeTab === 'expenses' ? (tripDetails.color || '#dc2626') : undefined }}
                     >
-                        <PoundSterling size={20} className="mb-1" />
+                        {(() => {
+                            const symbol = tripDetails.currencySymbol;
+                            if (symbol === '€') return <Euro size={20} className="mb-1" />;
+                            if (symbol === '$') return <DollarSign size={20} className="mb-1" />;
+                            if (symbol === '£') return <PoundSterling size={20} className="mb-1" />;
+                            return <PoundSterling size={20} className="mb-1" />; // Fallback
+                        })()}
                         <span className="text-[10px] font-bold">Spese</span>
                     </button>
-                    <button
-                        onClick={() => setActiveTab("transport")}
-                        className={`flex flex-col items-center p-2 rounded-xl transition-all ${activeTab === 'transport' ? 'bg-gray-50' : 'text-gray-400 hover:text-gray-600'}`}
-                        style={{ color: activeTab === 'transport' ? (tripDetails.color || '#dc2626') : undefined }}
-                    >
-                        <Train size={20} className="mb-1" />
-                        <span className="text-[10px] font-bold">Mezzi</span>
-                    </button>
+                    {/* Transport removed from mobile nav */}
                     <button
                         onClick={() => setActiveTab("backpack")}
                         className={`flex flex-col items-center p-2 rounded-xl transition-all ${activeTab === 'backpack' ? 'bg-gray-50' : 'text-gray-400 hover:text-gray-600'}`}
@@ -2061,6 +2478,14 @@ const TripDashboard = ({ tripId, onBack }) => {
                         <Backpack size={20} className="mb-1" />
                         <span className="text-[10px] font-bold">Zaino</span>
                     </button>
+                    <button
+                        onClick={() => setActiveTab("documents")}
+                        className={`flex flex-col items-center p-2 rounded-xl transition-all ${activeTab === 'documents' ? 'bg-gray-50' : 'text-gray-400 hover:text-gray-600'}`}
+                        style={{ color: activeTab === 'documents' ? (tripDetails.color || '#dc2626') : undefined }}
+                    >
+                        <FileText size={20} className="mb-1" />
+                        <span className="text-[10px] font-bold">Doc</span>
+                    </button>
                 </div>
             </div>
 
@@ -2068,10 +2493,14 @@ const TripDashboard = ({ tripId, onBack }) => {
     );
 };
 
-const LandingPage = ({ onSelectTrip }) => {
+// --- ROUTING LANDING PAGE ---
+const LandingPage = () => {
     const [trips, setTrips] = useState([]);
     const [isCreating, setIsCreating] = useState(false);
-    const [newTripData, setNewTripData] = useState({ title: "", flag: "🇬🇧", dates: "", color: "#000000" });
+    const [newTripData, setNewTripData] = useState({ title: "", flag: "🇬🇧", dates: "", color: "#000000", currencySymbol: "£", exchangeRate: "1" });
+
+    const navigate = useNavigate();
+    const onSelectTrip = (id) => navigate(`/trip/${id}/itinerary`);
 
     // Colors Palette
     const colors = [
@@ -2102,11 +2531,13 @@ const LandingPage = ({ onSelectTrip }) => {
             title: newTripData.title,
             dates: newTripData.dates || "Date TBD",
             flag: newTripData.flag || "🌍",
-            color: newTripData.color || "#000000"
+            color: newTripData.color || "#000000",
+            currencySymbol: newTripData.currencySymbol || "£",
+            exchangeRate: parseFloat(newTripData.exchangeRate) || 1
         });
         onSelectTrip(docRef.id);
         setIsCreating(false);
-        setNewTripData({ title: "", flag: "🇬🇧", dates: "", color: "#000000" });
+        setNewTripData({ title: "", flag: "🇬🇧", dates: "", color: "#000000", currencySymbol: "£", exchangeRate: "1" });
     };
 
     const handleDeleteTrip = async (tripId, tripTitle) => {
@@ -2276,6 +2707,27 @@ const LandingPage = ({ onSelectTrip }) => {
                         />
                     </InputGroup>
                 </div>
+                <div className="grid grid-cols-2 gap-3">
+                    <InputGroup label="Valuta (Simbolo)">
+                        <input
+                            type="text"
+                            value={newTripData.currencySymbol}
+                            onChange={e => setNewTripData({ ...newTripData, currencySymbol: e.target.value })}
+                            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-black focus:outline-none transition-colors text-center text-lg"
+                            placeholder="£"
+                        />
+                    </InputGroup>
+                    <InputGroup label="Cambio (Vs Euro)">
+                        <input
+                            type="number"
+                            step="0.01"
+                            value={newTripData.exchangeRate}
+                            onChange={e => setNewTripData({ ...newTripData, exchangeRate: e.target.value })}
+                            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-black focus:outline-none transition-colors"
+                            placeholder="1"
+                        />
+                    </InputGroup>
+                </div>
 
                 <div className="mb-6">
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2 ml-1">Colore Principale</label>
@@ -2300,16 +2752,18 @@ const LandingPage = ({ onSelectTrip }) => {
     );
 };
 
+
+// --- APP ROUTER ---
 const App = () => {
-    const [currentTripId, setCurrentTripId] = useState(null);
-
-    // Persist selection? Maybe later.
-
-    if (!currentTripId) {
-        return <LandingPage onSelectTrip={setCurrentTripId} />;
-    }
-
-    return <TripDashboard tripId={currentTripId} onBack={() => setCurrentTripId(null)} />;
+    return (
+        <HashRouter>
+            <Routes>
+                <Route path="/" element={<LandingPage />} />
+                <Route path="/trip/:tripId" element={<Navigate to="itinerary" replace />} />
+                <Route path="/trip/:tripId/:tab" element={<TripDashboard />} />
+            </Routes>
+        </HashRouter>
+    );
 };
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
