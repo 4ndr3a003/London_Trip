@@ -44,24 +44,63 @@ const App = () => {
     const [loading, setLoading] = React.useState(true);
 
     React.useEffect(() => {
-        // Simple check to see if components are loaded, retry buffer could be added here
-        if (LandingPage && TripDashboard) {
-            setLoading(false);
-        } else {
-            // If not found immediately, give it a split second in case of async race (though we are at bottom of body)
-            setTimeout(() => setLoading(false), 500);
-        }
+        const checkComponents = () => {
+            const lp = window.LandingPage;
+            const td = window.TripDashboard;
+
+            if (lp && td) {
+                console.log("Components loaded successfully.");
+                setLoading(false);
+                return true;
+            }
+            console.warn("Waiting for components...", { LandingPage: !!lp, TripDashboard: !!td });
+            return false;
+        };
+
+        // Check immediately
+        if (checkComponents()) return;
+
+        // Retry every 100ms for up to 2 seconds
+        const intervalId = setInterval(() => {
+            if (checkComponents()) {
+                clearInterval(intervalId);
+            }
+        }, 100);
+
+        const timeoutId = setTimeout(() => {
+            clearInterval(intervalId);
+            console.error("Component loading timed out.", {
+                LandingPage: !!window.LandingPage,
+                TripDashboard: !!window.TripDashboard,
+                React: !!window.React,
+                ReactDOM: !!window.ReactDOM,
+                ReactRouterDOM: !!window.ReactRouterDOM
+            });
+            setLoading(false); // Stop loading to show error screen
+        }, 2000);
+
+        return () => {
+            clearInterval(intervalId);
+            clearTimeout(timeoutId);
+        };
     }, []);
 
-    if (loading) return <div className="p-10 text-center">Inizializzazione...</div>;
+    if (loading) return <div className="p-10 text-center">Inizializzazione in corso...</div>;
 
     if (!LandingPage || !TripDashboard) {
         return (
             <div className="p-10 text-center text-red-600">
                 <h1 className="font-bold">Errore Critico</h1>
                 <p>Componenti non caricati correttamente.</p>
-                <p>LandingPage: {LandingPage ? "OK" : "Mancante"}</p>
-                <p>TripDashboard: {TripDashboard ? "OK" : "Mancante"}</p>
+                <div className="text-left inline-block mt-4 p-4 bg-gray-100 rounded text-xs font-mono">
+                    <p>Debug Info:</p>
+                    <p>LandingPage: {window.LandingPage ? "OK" : "Mancante"}</p>
+                    <p>TripDashboard: {window.TripDashboard ? "OK" : "Mancante"}</p>
+                    <p>React: {window.React ? "OK" : "Mancante"}</p>
+                    <p>ReactDOM: {window.ReactDOM ? "OK" : "Mancante"}</p>
+                </div>
+                <p className="mt-4 text-sm text-gray-500">Controlla la console per maggiori dettagli.</p>
+                <button onClick={() => window.location.reload()} className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Riprova</button>
             </div>
         );
     }
