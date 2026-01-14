@@ -1,0 +1,303 @@
+/* Landing Page */
+
+.landing-container {
+    min-height: 100vh;
+    background-color: #f8fafc;
+    /* bg-slate-50 */
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Header */
+.landing-header {
+    background-color: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    border-bottom: 1px solid #f3f4f6;
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.3s ease;
+}
+
+.landing-header-content {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.landing-app-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.landing-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    background: linear-gradient(to right, #111827, #4b5563);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+/* Content */
+.landing-content {
+    padding: 1.5rem;
+    padding-bottom: 6rem;
+    max-width: 48rem;
+    /* max-w-3xl */
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.landing-section-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 0.25rem;
+}
+
+.landing-subtitle {
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+
+/* Empty State */
+.landing-empty {
+    text-align: center;
+    padding: 2.5rem 0;
+    opacity: 0.6;
+}
+
+.landing-empty-icon {
+    background-color: #f3f4f6;
+    width: 4rem;
+    height: 4rem;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem auto;
+}
+
+/* Grid */
+.landing-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+    .landing-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Trip Card */
+.trip-card {
+    background-color: white;
+    border-radius: 1rem;
+    padding: 1.25rem;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    border: 1px solid #f3f4f6;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.trip-card:hover {
+    /* Optional hover effect */
+}
+
+.trip-card-accent {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0.375rem;
+    /* w-1.5 */
+    height: 100%;
+}
+
+.trip-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.trip-card-main {
+    flex: 1;
+}
+
+.trip-card-title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.trip-card-flag {
+    font-size: 1.5rem;
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.1));
+}
+
+.trip-card-title {
+    font-weight: 700;
+    font-size: 1.125rem;
+    color: #1f2937;
+    line-height: 1.25;
+}
+
+.trip-card-date {
+    color: #6b7280;
+    font-size: 0.875rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.trip-card-actions {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+}
+
+.trip-delete-btn {
+    padding: 0.5rem;
+    color: #d1d5db;
+    border-radius: 0.75rem;
+    transition: all 0.2s;
+    margin-right: -0.5rem;
+    margin-top: -0.5rem;
+}
+
+.trip-delete-btn:hover {
+    color: #ef4444;
+    background-color: #fef2f2;
+}
+
+.trip-card-footer {
+    margin-top: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.trip-card-tag {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background-color: #f9fafb;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+}
+
+.trip-card-arrow-container {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 9999px;
+    background-color: #f3f4f6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9ca3af;
+}
+
+.trip-card-arrow {
+    transform: rotate(-90deg);
+}
+
+/* FAB */
+.fab-create {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    z-index: 20;
+}
+
+.fab-btn {
+    background-color: #000;
+    color: white;
+    padding: 1rem;
+    border-radius: 9999px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s;
+}
+
+.fab-btn:hover {
+    transform: scale(1.1);
+}
+
+.fab-btn:active {
+    transform: scale(0.95);
+}
+
+.fab-icon {
+    transition: transform 0.3s;
+}
+
+.fab-btn:hover .fab-icon {
+    transform: rotate(90deg);
+}
+
+.fab-label {
+    font-weight: 700;
+    padding-right: 0.5rem;
+    display: none;
+    transition: all 0.3s;
+}
+
+.fab-btn:hover .fab-label {
+    display: inline-block;
+}
+
+/* Color Picker */
+.color-picker-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    margin-bottom: 0.5rem;
+    margin-left: 0.25rem;
+}
+
+.color-picker-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.color-swatch {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 9999px;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    transition: transform 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid transparent;
+}
+
+.color-swatch:active {
+    transform: scale(0.95);
+}
+
+.color-swatch.selected {
+    border-color: #1f2937;
+    transform: scale(1.1);
+}

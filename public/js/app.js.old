@@ -1,0 +1,19 @@
+const { HashRouter, Routes, Route, Navigate } = ReactRouterDOM;
+
+// Get pages from window (loaded via script tags)
+const { LandingPage, TripDashboard } = window;
+
+const App = () => {
+    return (
+        <HashRouter>
+            <Routes>
+                <Route path="/" element={<LandingPage />} />
+                <Route path="/trip/:tripId" element={<Navigate to="itinerary" replace />} />
+                <Route path="/trip/:tripId/:tab" element={<TripDashboard />} />
+            </Routes>
+        </HashRouter>
+    );
+};
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);

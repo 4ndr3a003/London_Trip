@@ -1,6 +1,6 @@
 {
-    "short_name": "LondonTrip",
-    "name": "London Trip Planner 2026",
+    "short_name": "Trip Planner",
+    "name": "Trip Planner",
     "icons": [
         {
             "src": "img/icon-192.png",
