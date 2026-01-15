@@ -8,7 +8,7 @@ const TripDashboard = () => {
         MapPin, Train, PoundSterling, Euro, DollarSign, CheckCircle, AlertCircle, Plus, X,
         Edit, Trash, User, Smartphone, Search, Minus, Calendar, Clock, Check, ArrowDown,
         Backpack, FileText, LinkIcon, RefreshCw, Hourglass, Star,
-        BackpackTab, DocumentsTab
+        BackpackTab, DocumentsTab, ThemeToggle
     } = window;
 
     const { tripId, tab } = useParams();
@@ -34,14 +34,21 @@ const TripDashboard = () => {
     const [expenses, setExpenses] = useState([]);
 
     const [tripDetails, setTripDetails] = useState({ title: "Londra 2026", dates: "25 Feb - 02 Mar", flag: "🇬🇧", color: "#000000", currencySymbol: "£", exchangeRate: 1.15 });
+    const [themeMode, setThemeMode] = useState(localStorage.getItem('themeMode') || 'light');
 
 
     // Theme Effect
+    // Theme Effect
     useEffect(() => {
         if (tripDetails.color) {
-            applyTheme(tripDetails.color);
+            applyTheme(tripDetails.color, themeMode);
         }
-    }, [tripDetails.color]);
+        localStorage.setItem('themeMode', themeMode);
+    }, [tripDetails.color, themeMode]);
+
+    const toggleTheme = () => {
+        setThemeMode(prev => prev === 'light' ? 'dark' : 'light');
+    };
 
     const [activeModal, setActiveModal] = useState(null);
     const [editingId, setEditingId] = useState(null);
@@ -215,7 +222,22 @@ const TripDashboard = () => {
         return result;
     }, [expenses, filterStatusExpenses, sortOrder]);
 
-    const colors = [{ hex: "#000000", name: "Nero" }, { hex: "#dc2626", name: "Rosso" }, { hex: "#2563eb", name: "Blu" }, { hex: "#16a34a", name: "Verde" }, { hex: "#d97706", name: "Arancione" }, { hex: "#9333ea", name: "Viola" }, { hex: "#db2777", name: "Rosa" }, { hex: "#0891b2", name: "Ciano" }];
+    const colors = [
+        { hex: "#000000", name: "Nero" },
+        { hex: "#dc2626", name: "Rosso" },
+        { hex: "#2563eb", name: "Blu" },
+        { hex: "#16a34a", name: "Verde" },
+        { hex: "#d97706", name: "Arancione" },
+        { hex: "#9333ea", name: "Viola" },
+        { hex: "#db2777", name: "Rosa" },
+        { hex: "#0891b2", name: "Ciano" },
+        { hex: "#EAB308", name: "Giallo" },
+        { hex: "#4F46E5", name: "Indaco" },
+        { hex: "#84CC16", name: "Lime" },
+        { hex: "#0D9488", name: "Ottanio" },
+        { hex: "#64748B", name: "Grigio Blu" },
+        { hex: "#795548", name: "Marrone" }
+    ];
 
     return (
         <div className={`dashboard-container page-transition-wrapper ${isExiting ? 'page-exit' : 'page-enter'}`} style={{ background: `linear-gradient(180deg, var(--md-sys-color-primary-container) 0%, var(--md-sys-color-surface) 35%)` }}>
@@ -227,6 +249,7 @@ const TripDashboard = () => {
                         <div onClick={onBack} className="w-12 h-12 rounded-full flex items-center justify-center cursor-pointer text-[var(--md-sys-color-primary)] hover:bg-[var(--md-sys-color-primary)]/10 transition-colors active:scale-95">
                             <ArrowDown size={28} />
                         </div>
+                        <ThemeToggle mode={themeMode} onToggle={toggleTheme} />
                         {deferredPrompt && (
                             <button onClick={(e) => { e.stopPropagation(); handleInstallClick(); }} className="bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] px-4 py-2 rounded-full font-bold text-sm shadow-lg flex items-center gap-2">
                                 <Smartphone size={16} /> <span>Installa</span>
@@ -246,7 +269,7 @@ const TripDashboard = () => {
             </header>
 
             {/* Content Area - Rounded Top with Shadow Separator */}
-            <div className="flex-1 bg-[var(--md-sys-color-surface-container)] rounded-t-[32px] overflow-hidden flex flex-col shadow-[0_-8px_30px_rgba(0,0,0,0.08)] relative z-0 border-t border-[var(--md-sys-color-outline-variant)]/20">
+            <div className="flex-1 bg-[var(--md-sys-color-surface-container)] rounded-t-[32px] overflow-hidden flex flex-col shadow-[0_-8px_30px_rgba(0,0,0,0.08)] relative z-0">
                 {/* Desktop Nav removed or redundant for mobile-first view? Keeping it if needed but hiding for now or simplifying */}
                 {/* We rely on Bottom Nav for mobile. */}
 
@@ -454,30 +477,30 @@ const TripDashboard = () => {
                             {/* Moved Stats Here - Only for Expenses - Material 3 Expressive Complementary Shapes */}
                             <div className="grid grid-cols-2 gap-3">
                                 {/* GIÀ PAGATO - Left rounded shape */}
-                                <div className="payment-card payment-card-paid relative overflow-hidden bg-gradient-to-br from-[#C4EED0] via-[#D8F5E0] to-[#E6F9EE] p-5 rounded-l-[32px] rounded-r-[12px] flex flex-col items-start gap-2 text-[#0A5C1F] shadow-lg border-2 border-[#A3E4B5]/50">
+                                <div className={`payment-card payment-card-paid relative overflow-hidden p-5 rounded-l-[32px] rounded-r-[12px] flex flex-col items-start gap-2 shadow-lg border-2 ${themeMode === 'dark' ? 'bg-green-900 border-green-700 text-green-100' : 'bg-gradient-to-br from-[#C4EED0] via-[#D8F5E0] to-[#E6F9EE] border-[#A3E4B5]/50 text-[#0A5C1F]'}`}>
                                     {/* Decorative background element */}
-                                    <div className="absolute -right-4 -top-4 w-20 h-20 rounded-full bg-[#0A5C1F]/5"></div>
-                                    <div className="absolute -right-1 -bottom-1 w-12 h-12 rounded-full bg-[#0A5C1F]/8"></div>
+                                    <div className={`absolute -right-4 -top-4 w-20 h-20 rounded-full ${themeMode === 'dark' ? 'bg-green-800/20' : 'bg-[#0A5C1F]/5'}`}></div>
+                                    <div className={`absolute -right-1 -bottom-1 w-12 h-12 rounded-full ${themeMode === 'dark' ? 'bg-green-800/30' : 'bg-[#0A5C1F]/8'}`}></div>
                                     {/* Icon */}
-                                    <div className="w-8 h-8 rounded-full bg-[#0A5C1F]/15 flex items-center justify-center mb-1">
-                                        <Check size={18} strokeWidth={3} className="text-[#0A5C1F]" />
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${themeMode === 'dark' ? 'bg-green-800/50' : 'bg-[#0A5C1F]/15'}`}>
+                                        <Check size={18} strokeWidth={3} className={themeMode === 'dark' ? 'text-green-200' : 'text-[#0A5C1F]'} />
                                     </div>
                                     <span className="label-medium font-bold uppercase tracking-wider opacity-80">Già Pagato</span>
                                     <span className="display-small font-black tracking-tight">€{Math.round(totalPaidEUR)}</span>
-                                    <span className="label-small font-semibold opacity-70 bg-[#0A5C1F]/10 px-2 py-0.5 rounded-full">€{(totalPaidEUR / 2).toFixed(0)} /testa</span>
+                                    <span className={`label-small font-semibold opacity-70 px-2 py-0.5 rounded-full ${themeMode === 'dark' ? 'bg-green-800/40' : 'bg-[#0A5C1F]/10'}`}>€{(totalPaidEUR / 2).toFixed(0)} /testa</span>
                                 </div>
                                 {/* PREVISTO - Right rounded shape */}
-                                <div className="payment-card payment-card-due relative overflow-hidden bg-gradient-to-bl from-[#FECACA] via-[#FFD9D9] to-[#FFE8E8] p-5 rounded-r-[32px] rounded-l-[12px] flex flex-col items-end gap-2 text-[#991B1B] shadow-lg border-2 border-[#FCA5A5]/50">
+                                <div className={`payment-card payment-card-due relative overflow-hidden p-5 rounded-r-[32px] rounded-l-[12px] flex flex-col items-end gap-2 shadow-lg border-2 ${themeMode === 'dark' ? 'bg-red-900 border-red-700 text-red-100' : 'bg-gradient-to-bl from-[#FECACA] via-[#FFD9D9] to-[#FFE8E8] border-[#FCA5A5]/50 text-[#991B1B]'}`}>
                                     {/* Decorative background element */}
-                                    <div className="absolute -left-4 -top-4 w-20 h-20 rounded-full bg-[#991B1B]/5"></div>
-                                    <div className="absolute -left-1 -bottom-1 w-12 h-12 rounded-full bg-[#991B1B]/8"></div>
+                                    <div className={`absolute -left-4 -top-4 w-20 h-20 rounded-full ${themeMode === 'dark' ? 'bg-red-800/20' : 'bg-[#991B1B]/5'}`}></div>
+                                    <div className={`absolute -left-1 -bottom-1 w-12 h-12 rounded-full ${themeMode === 'dark' ? 'bg-red-800/30' : 'bg-[#991B1B]/8'}`}></div>
                                     {/* Icon */}
-                                    <div className="w-8 h-8 rounded-full bg-[#991B1B]/15 flex items-center justify-center mb-1">
-                                        <Hourglass size={18} strokeWidth={2.5} className="text-[#991B1B]" />
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${themeMode === 'dark' ? 'bg-red-800/50' : 'bg-[#991B1B]/15'}`}>
+                                        <Hourglass size={18} strokeWidth={2.5} className={themeMode === 'dark' ? 'text-red-200' : 'text-[#991B1B]'} />
                                     </div>
                                     <span className="label-medium font-bold uppercase tracking-wider opacity-80 text-right">Previsto</span>
                                     <span className="display-small font-black tracking-tight">{TRIP_CURRENCY}{Math.round(toPayForeign)}</span>
-                                    <span className="label-small font-semibold opacity-70 bg-[#991B1B]/10 px-2 py-0.5 rounded-full">{TRIP_CURRENCY}{(toPayForeign / 2).toFixed(0)} /testa</span>
+                                    <span className={`label-small font-semibold opacity-70 px-2 py-0.5 rounded-full ${themeMode === 'dark' ? 'bg-red-800/40' : 'bg-[#991B1B]/10'}`}>{TRIP_CURRENCY}{(toPayForeign / 2).toFixed(0)} /testa</span>
                                 </div>
                             </div>
 
@@ -688,14 +711,14 @@ const TripDashboard = () => {
                     <input
                         type="text"
                         placeholder="Es. London Eye"
-                        className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50"
+                        className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
                         value={newItemItinerary.nome}
                         onChange={e => setNewItemItinerary({ ...newItemItinerary, nome: e.target.value })}
                     />
                 </InputGroup>
                 <InputGroup label="Categoria">
                     <select
-                        className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all appearance-none text-[var(--md-sys-color-on-surface)]"
+                        className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all appearance-none text-[var(--md-sys-color-on-surface)]"
                         value={newItemItinerary.categoria}
                         onChange={e => setNewItemItinerary({ ...newItemItinerary, categoria: e.target.value })}
                     >
@@ -706,7 +729,7 @@ const TripDashboard = () => {
                     <input
                         type="text"
                         placeholder="Es. Westminster"
-                        className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50"
+                        className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
                         value={newItemItinerary.quartiere}
                         onChange={e => setNewItemItinerary({ ...newItemItinerary, quartiere: e.target.value })}
                     />
@@ -716,7 +739,7 @@ const TripDashboard = () => {
                         <input
                             type="text"
                             placeholder="Es. 2 ore"
-                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50"
+                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
                             value={newItemItinerary.durata}
                             onChange={e => setNewItemItinerary({ ...newItemItinerary, durata: e.target.value })}
                         />
@@ -725,7 +748,7 @@ const TripDashboard = () => {
                         <input
                             type="text"
                             placeholder="10:00 - 18:00"
-                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50"
+                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
                             value={newItemItinerary.orari}
                             onChange={e => setNewItemItinerary({ ...newItemItinerary, orari: e.target.value })}
                         />
@@ -735,7 +758,7 @@ const TripDashboard = () => {
                     <input
                         type="text"
                         placeholder="Es. Chiuso lunedì"
-                        className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50"
+                        className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
                         value={newItemItinerary.eccezioni}
                         onChange={e => setNewItemItinerary({ ...newItemItinerary, eccezioni: e.target.value })}
                     />
@@ -744,7 +767,7 @@ const TripDashboard = () => {
                     <input
                         type="text"
                         placeholder="https://..."
-                        className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50"
+                        className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
                         value={newItemItinerary.img}
                         onChange={e => setNewItemItinerary({ ...newItemItinerary, img: e.target.value })}
                     />
@@ -753,7 +776,7 @@ const TripDashboard = () => {
                     <input
                         type="text"
                         placeholder="https://..."
-                        className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50"
+                        className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
                         value={newItemItinerary.mapEmbed}
                         onChange={e => setNewItemItinerary({ ...newItemItinerary, mapEmbed: e.target.value })}
                     />
@@ -762,10 +785,10 @@ const TripDashboard = () => {
                 <Button onClick={handleAddItinerary} className="mt-4">{editingId ? "Salva Modifiche" : "Aggiungi"}</Button>
             </Modal >
             <Modal isOpen={activeModal === 'transport'} onClose={() => setActiveModal(null)} title="Spostamento">
-                <InputGroup label="Mezzo"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50" value={newItemTransport.dettaglio} onChange={e => setNewItemTransport({ ...newItemTransport, dettaglio: e.target.value })} /></InputGroup>
-                <div className="grid grid-cols-2 gap-3"><InputGroup label="Partenza"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50" value={newItemTransport.partenza} onChange={e => setNewItemTransport({ ...newItemTransport, partenza: e.target.value })} /></InputGroup><InputGroup label="Arrivo"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50" value={newItemTransport.arrivo} onChange={e => setNewItemTransport({ ...newItemTransport, arrivo: e.target.value })} /></InputGroup></div>
-                <div className="grid grid-cols-2 gap-3"><InputGroup label="Data"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50" value={newItemTransport.data} onChange={e => setNewItemTransport({ ...newItemTransport, data: e.target.value })} /></InputGroup><InputGroup label="Ora"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50" value={newItemTransport.ora} onChange={e => setNewItemTransport({ ...newItemTransport, ora: e.target.value })} /></InputGroup></div>
-                <InputGroup label="Costo"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50" value={newItemTransport.costo} onChange={e => setNewItemTransport({ ...newItemTransport, costo: e.target.value })} /></InputGroup>
+                <InputGroup label="Mezzo"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemTransport.dettaglio} onChange={e => setNewItemTransport({ ...newItemTransport, dettaglio: e.target.value })} /></InputGroup>
+                <div className="grid grid-cols-2 gap-3"><InputGroup label="Partenza"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemTransport.partenza} onChange={e => setNewItemTransport({ ...newItemTransport, partenza: e.target.value })} /></InputGroup><InputGroup label="Arrivo"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemTransport.arrivo} onChange={e => setNewItemTransport({ ...newItemTransport, arrivo: e.target.value })} /></InputGroup></div>
+                <div className="grid grid-cols-2 gap-3"><InputGroup label="Data"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemTransport.data} onChange={e => setNewItemTransport({ ...newItemTransport, data: e.target.value })} /></InputGroup><InputGroup label="Ora"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemTransport.ora} onChange={e => setNewItemTransport({ ...newItemTransport, ora: e.target.value })} /></InputGroup></div>
+                <InputGroup label="Costo"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemTransport.costo} onChange={e => setNewItemTransport({ ...newItemTransport, costo: e.target.value })} /></InputGroup>
                 <Button onClick={handleAddTransport} className="mt-4">Salva</Button>
             </Modal>
             <Modal isOpen={activeModal === 'expenses'} onClose={() => { setActiveModal(null); setEditingId(null); }} title={editingId ? "Modifica Spesa" : "Nuova Spesa"}>
@@ -773,7 +796,7 @@ const TripDashboard = () => {
                     <input
                         type="text"
                         placeholder="Es. Cena"
-                        className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50"
+                        className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
                         value={newItemExpense.item}
                         onChange={e => setNewItemExpense({ ...newItemExpense, item: e.target.value })}
                     />
@@ -783,14 +806,14 @@ const TripDashboard = () => {
                         <input
                             type="number"
                             placeholder="0.00"
-                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all font-bold text-[var(--md-sys-color-on-surface)] placeholder:opacity-50"
+                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all font-bold text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
                             value={newItemExpense.costo}
                             onChange={e => setNewItemExpense({ ...newItemExpense, costo: e.target.value })}
                         />
                     </InputGroup>
                     <InputGroup label="Valuta">
                         <select
-                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all appearance-none text-sm font-medium text-[var(--md-sys-color-on-surface)]"
+                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all appearance-none text-sm font-medium text-[var(--md-sys-color-on-surface)]"
                             value={newItemExpense.valuta}
                             onChange={e => setNewItemExpense({ ...newItemExpense, valuta: e.target.value })}
                         >
@@ -820,7 +843,7 @@ const TripDashboard = () => {
 
                 <InputGroup label="Chi Ha Pagato">
                     <select
-                        className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all appearance-none text-[var(--md-sys-color-on-surface)]"
+                        className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all appearance-none text-[var(--md-sys-color-on-surface)]"
                         value={newItemExpense.chi}
                         onChange={e => setNewItemExpense({ ...newItemExpense, chi: e.target.value })}
                     >
@@ -834,7 +857,7 @@ const TripDashboard = () => {
                     <input
                         type="text"
                         placeholder="Es. Da dividere"
-                        className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50"
+                        className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
                         value={newItemExpense.note || ""}
                         onChange={e => setNewItemExpense({ ...newItemExpense, note: e.target.value })}
                     />
@@ -843,7 +866,7 @@ const TripDashboard = () => {
                 <Button onClick={handleAddExpense} className="mt-4 !bg-[#B3261E] !text-white shadow-md hover:!bg-[#8C1D18]">Salva Spesa</Button>
             </Modal>
             <Modal isOpen={activeModal === 'day'} onClose={() => setActiveModal(null)} title="Nuova Giornata">
-                <InputGroup label="Data"><input type="date" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50" value={newItemDay.data} onChange={e => setNewItemDay({ ...newItemDay, data: e.target.value })} /></InputGroup>
+                <InputGroup label="Data"><input type="date" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemDay.data} onChange={e => setNewItemDay({ ...newItemDay, data: e.target.value })} /></InputGroup>
                 <Button onClick={handleAddDay} className="mt-4">Salva</Button>
             </Modal>
             <Modal isOpen={activeModal === 'event'} onClose={() => { setActiveModal(null); setEditingId(null); }} title="Aggiungi Evento">
@@ -868,7 +891,7 @@ const TripDashboard = () => {
                             <input
                                 type="text"
                                 placeholder="Es. Pranzo, Shopping, Relax..."
-                                className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50"
+                                className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
                                 value={newItemEvent.customTitle}
                                 onChange={e => setNewItemEvent({ ...newItemEvent, customTitle: e.target.value })}
                             />
@@ -881,7 +904,7 @@ const TripDashboard = () => {
                             <input
                                 type="text"
                                 placeholder="Cerca attrazione..."
-                                className="w-full pl-10 pr-4 py-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-sm text-[var(--md-sys-color-on-surface)] placeholder:opacity-50"
+                                className="w-full pl-10 pr-4 py-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-sm text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
                                 value={eventSearch}
                                 onChange={(e) => setEventSearch(e.target.value)}
                             />
@@ -935,7 +958,7 @@ const TripDashboard = () => {
                         <div className="relative">
                             <input
                                 type="time"
-                                className="w-full p-4 pl-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all font-bold text-[var(--md-sys-color-on-surface)] placeholder:opacity-50"
+                                className="w-full p-4 pl-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all font-bold text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
                                 value={newItemEvent.time}
                                 onChange={e => setNewItemEvent({ ...newItemEvent, time: e.target.value })}
                             />
@@ -947,7 +970,7 @@ const TripDashboard = () => {
                         <input
                             type="text"
                             placeholder="Es. Ingresso prenotato, dettagli..."
-                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-sm text-[var(--md-sys-color-on-surface)] placeholder:opacity-50"
+                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-sm text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
                             value={newItemEvent.notes}
                             onChange={e => setNewItemEvent({ ...newItemEvent, notes: e.target.value })}
                         />
@@ -959,8 +982,8 @@ const TripDashboard = () => {
                 </Button>
             </Modal>
             <Modal isOpen={activeModal === 'tripDetails'} onClose={() => setActiveModal(null)} title="Dettagli Viaggio">
-                <InputGroup label="Titolo"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50" value={newItemTripDetails.title} onChange={e => setNewItemTripDetails({ ...newItemTripDetails, title: e.target.value })} /></InputGroup>
-                <div className="grid grid-cols-2 gap-3"><InputGroup label="Date"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50" value={newItemTripDetails.dates} onChange={e => setNewItemTripDetails({ ...newItemTripDetails, dates: e.target.value })} /></InputGroup><InputGroup label="Flag"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50" value={newItemTripDetails.flag} onChange={e => setNewItemTripDetails({ ...newItemTripDetails, flag: e.target.value })} /></InputGroup></div>
+                <InputGroup label="Titolo"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemTripDetails.title} onChange={e => setNewItemTripDetails({ ...newItemTripDetails, title: e.target.value })} /></InputGroup>
+                <div className="grid grid-cols-2 gap-3"><InputGroup label="Date"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemTripDetails.dates} onChange={e => setNewItemTripDetails({ ...newItemTripDetails, dates: e.target.value })} /></InputGroup><InputGroup label="Flag"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemTripDetails.flag} onChange={e => setNewItemTripDetails({ ...newItemTripDetails, flag: e.target.value })} /></InputGroup></div>
                 <div className="flex flex-wrap gap-2 mt-2">{colors.map(c => <button key={c.hex} onClick={() => setNewItemTripDetails({ ...newItemTripDetails, color: c.hex })} className="w-8 h-8 rounded-full border-2" style={{ backgroundColor: c.hex, borderColor: newItemTripDetails.color === c.hex ? 'black' : 'transparent' }}></button>)}</div>
                 <Button onClick={handleUpdateTripDetails} className="mt-4">Salva</Button>
             </Modal>

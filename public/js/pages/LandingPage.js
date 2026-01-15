@@ -8,12 +8,13 @@ const { useNavigate } = ReactRouterDOM;
 const LandingPage = () => {
     const {
         MapPin, Calendar, Trash, ArrowDown, Plus, Check,
-        Modal, Button, InputGroup
+        Modal, Button, InputGroup, ThemeToggle
     } = window;
 
     const [trips, setTrips] = useState([]);
     const [isCreating, setIsCreating] = useState(false);
     const [newTripData, setNewTripData] = useState({ title: "", flag: "🇬🇧", dates: "", color: "#000000", currencySymbol: "£", exchangeRate: "1" });
+    const [themeMode, setThemeMode] = useState(localStorage.getItem('themeMode') || 'light');
 
     const navigate = useNavigate();
     const onSelectTrip = (id) => navigate(`/trip/${id}/itinerary`);
@@ -27,7 +28,13 @@ const LandingPage = () => {
         { hex: "#d97706", name: "Arancione" },
         { hex: "#9333ea", name: "Viola" },
         { hex: "#db2777", name: "Rosa" },
-        { hex: "#0891b2", name: "Ciano" }
+        { hex: "#0891b2", name: "Ciano" },
+        { hex: "#EAB308", name: "Giallo" },
+        { hex: "#4F46E5", name: "Indaco" },
+        { hex: "#84CC16", name: "Lime" },
+        { hex: "#0D9488", name: "Ottanio" },
+        { hex: "#64748B", name: "Grigio Blu" },
+        { hex: "#795548", name: "Marrone" }
     ];
 
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: "", message: "", onConfirm: null });
@@ -40,6 +47,16 @@ const LandingPage = () => {
         });
         return () => unsub();
     }, []);
+
+    // Theme Effect
+    useEffect(() => {
+        applyTheme('#DC2626', themeMode); // Use default red seed for landing page
+        localStorage.setItem('themeMode', themeMode);
+    }, [themeMode]);
+
+    const toggleTheme = () => {
+        setThemeMode(prev => prev === 'light' ? 'dark' : 'light');
+    };
 
     const handleCreateTrip = async () => {
         if (!newTripData.title) return;
@@ -92,7 +109,7 @@ const LandingPage = () => {
             <header className="pt-12 pb-8 px-6">
                 <div className="flex justify-between items-center mb-6">
                     <img src="img/icon-192.png" alt="App Icon" className="w-12 h-12 rounded-[16px] shadow-sm" />
-                    {/* Add Settings or Profile Icon here if needed */}
+                    <ThemeToggle mode={themeMode} onToggle={toggleTheme} />
                 </div>
                 <h1 className="display-large leading-tight text-[var(--md-sys-color-on-surface)]">
                     Trip<br />Planner
@@ -184,7 +201,7 @@ const LandingPage = () => {
                         type="text"
                         value={newTripData.title}
                         onChange={e => setNewTripData({ ...newTripData, title: e.target.value })}
-                        className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl focus:ring-2 focus:ring-[var(--md-sys-color-primary)] outline-none transition-all placeholder:opacity-50 font-bold text-lg"
+                        className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl focus:ring-2 focus:ring-[var(--md-sys-color-primary)] outline-none transition-all placeholder:text-[var(--md-sys-color-on-surface-variant)] font-bold text-lg"
                         placeholder="Es. Londra 2026"
                     />
                 </InputGroup>
@@ -194,7 +211,7 @@ const LandingPage = () => {
                             type="text"
                             value={newTripData.flag}
                             onChange={e => setNewTripData({ ...newTripData, flag: e.target.value })}
-                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none text-center text-2xl"
+                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none text-center text-2xl"
                             placeholder="🇬🇧"
                         />
                     </InputGroup>
@@ -203,7 +220,7 @@ const LandingPage = () => {
                             type="text"
                             value={newTripData.dates}
                             onChange={e => setNewTripData({ ...newTripData, dates: e.target.value })}
-                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none text-sm font-medium"
+                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none text-sm font-medium"
                             placeholder="Es. 25 Feb - 2 Mar"
                         />
                     </InputGroup>
@@ -214,7 +231,7 @@ const LandingPage = () => {
                             type="text"
                             value={newTripData.currencySymbol}
                             onChange={e => setNewTripData({ ...newTripData, currencySymbol: e.target.value })}
-                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none text-center text-lg font-bold"
+                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none text-center text-lg font-bold"
                             placeholder="£"
                         />
                     </InputGroup>
@@ -224,7 +241,7 @@ const LandingPage = () => {
                             step="0.01"
                             value={newTripData.exchangeRate}
                             onChange={e => setNewTripData({ ...newTripData, exchangeRate: e.target.value })}
-                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none text-center font-bold"
+                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none text-center font-bold"
                             placeholder="1"
                         />
                     </InputGroup>
