@@ -2,19 +2,19 @@
 :root {
     /* === Material 3 Expressive Color System === */
     /* Seed Color Reference */
-    --md-sys-color-seed: #DC2626;
+    --md-sys-color-seed: #d97706;
 
     /* Primary Colors */
-    --md-sys-color-primary: #904A43;
+    --md-sys-color-primary: #A86B24;
     --md-sys-color-on-primary: #FFFFFF;
-    --md-sys-color-primary-container: #FFDAD6;
-    --md-sys-color-on-primary-container: #73332E;
+    --md-sys-color-primary-container: #F3E6D8;
+    --md-sys-color-on-primary-container: #7E501B;
 
     /* Secondary Colors */
-    --md-sys-color-secondary: #775653;
+    --md-sys-color-secondary: #8D693F;
     --md-sys-color-on-secondary: #FFFFFF;
-    --md-sys-color-secondary-container: #FFDAD6;
-    --md-sys-color-on-secondary-container: #5D3F3C;
+    --md-sys-color-secondary-container: #EEE6DD;
+    --md-sys-color-on-secondary-container: #694F30;
 
     /* Tertiary Colors */
     --md-sys-color-tertiary: #715B2E;

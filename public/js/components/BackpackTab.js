@@ -1,12 +1,15 @@
 const { useState, useEffect } = React;
-const BackpackTab = ({ tripId }) => {
+const BackpackTab = ({ tripId, participants }) => {
     const {
         User, CheckCircle, MapPin, Backpack, Search, Badge,
         Plus, Minus, Edit, Trash, Button, Modal, InputGroup, SegmentedControl
     } = window;
+
+    const owners = (participants && participants.length > 0) ? participants : ["Andrea Inardi", "Elena Cafasso"];
+
     const [backpack, setBackpack] = useState([]);
-    const [newItemBackpack, setNewItemBackpack] = useState({ item: "", categoria: "Altro", packed: false, qty: 1, outside: false, ml: "", owner: "Andrea Inardi", collocazione: "" });
-    const [backpackOwnerFilter, setBackpackOwnerFilter] = useState("Andrea Inardi");
+    const [newItemBackpack, setNewItemBackpack] = useState({ item: "", categoria: "Altro", packed: false, qty: 1, outside: false, ml: "", owner: owners[0], collocazione: "" });
+    const [backpackOwnerFilter, setBackpackOwnerFilter] = useState(owners[0]);
     const [backpackFilterLocation, setBackpackFilterLocation] = useState("Tutti");
     const [backpackFilterPlacement, setBackpackFilterPlacement] = useState("Tutti");
     const [activeModal, setActiveModal] = useState(null);
@@ -83,7 +86,7 @@ const BackpackTab = ({ tripId }) => {
                     {/* Owner & Status Toggles with Sliding Pill Animation */}
                     <div className="flex flex-col gap-3">
                         <SegmentedControl
-                            options={["Andrea Inardi", "Elena Cafasso"]}
+                            options={owners}
                             value={backpackOwnerFilter}
                             onChange={(owner) => { setBackpackOwnerFilter(owner); setBackpackFilterPlacement("Tutti"); }}
                             size="large"
@@ -322,8 +325,9 @@ const BackpackTab = ({ tripId }) => {
                         value={newItemBackpack.owner}
                         onChange={(e) => setNewItemBackpack({ ...newItemBackpack, owner: e.target.value })}
                     >
-                        <option value="Andrea Inardi">Andrea Inardi</option>
-                        <option value="Elena Cafasso">Elena Cafasso</option>
+                        {owners.map(o => (
+                            <option key={o} value={o}>{o}</option>
+                        ))}
                     </select>
                 </InputGroup>
 

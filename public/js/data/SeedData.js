@@ -138,3 +138,8 @@ window.seedDays = [
         events: []
     }
 ];
+
+
+window.defaultBackpackItems = [
+];
+

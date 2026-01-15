@@ -13,7 +13,9 @@ const LandingPage = () => {
 
     const [trips, setTrips] = useState([]);
     const [isCreating, setIsCreating] = useState(false);
-    const [newTripData, setNewTripData] = useState({ title: "", flag: "🇬🇧", dates: "", color: "#000000", currencySymbol: "£", exchangeRate: "1" });
+    const [newTripData, setNewTripData] = useState({ title: "", flag: "🇬🇧", dates: "", color: "#d97706", currencySymbol: "£", exchangeRate: "1", participants: ["Andrea Inardi"] });
+    const [newParticipantName, setNewParticipantName] = useState("");
+
     const [themeMode, setThemeMode] = useState(localStorage.getItem('themeMode') || 'light');
 
     const navigate = useNavigate();
@@ -50,7 +52,7 @@ const LandingPage = () => {
 
     // Theme Effect
     useEffect(() => {
-        applyTheme('#DC2626', themeMode); // Use default red seed for landing page
+        applyTheme('#d97706', themeMode); // Use default orange seed for landing page
         localStorage.setItem('themeMode', themeMode);
     }, [themeMode]);
 
@@ -66,11 +68,41 @@ const LandingPage = () => {
             flag: newTripData.flag || "🌍",
             color: newTripData.color || "#000000",
             currencySymbol: newTripData.currencySymbol || "£",
-            exchangeRate: parseFloat(newTripData.exchangeRate) || 1
+            exchangeRate: parseFloat(newTripData.exchangeRate) || 1,
+            participants: newTripData.participants || []
         });
+
+        // Initialize Backpacks for each participant
+        const backpackBatch = db.batch();
+        const defaultItems = window.defaultBackpackItems || [];
+
+        if (newTripData.participants && newTripData.participants.length > 0) {
+            newTripData.participants.forEach(person => {
+                defaultItems.forEach(item => {
+                    const newDocRef = db.collection("trips").doc(docRef.id).collection("backpack").doc();
+                    backpackBatch.set(newDocRef, {
+                        ...item,
+                        owner: person
+                    });
+                });
+            });
+            await backpackBatch.commit();
+        }
+
         onSelectTrip(docRef.id);
         setIsCreating(false);
-        setNewTripData({ title: "", flag: "🇬🇧", dates: "", color: "#000000", currencySymbol: "£", exchangeRate: "1" });
+        setNewTripData({ title: "", flag: "🇬🇧", dates: "", color: "#d97706", currencySymbol: "£", exchangeRate: "1", participants: ["Andrea Inardi"] });
+    };
+
+    const addParticipant = () => {
+        if (!newParticipantName.trim()) return;
+        if (newTripData.participants.includes(newParticipantName.trim())) return;
+        setNewTripData({ ...newTripData, participants: [...newTripData.participants, newParticipantName.trim()] });
+        setNewParticipantName("");
+    };
+
+    const removeParticipant = (name) => {
+        setNewTripData({ ...newTripData, participants: newTripData.participants.filter(p => p !== name) });
     };
 
     const handleDeleteTrip = async (tripId, tripTitle) => {
@@ -245,6 +277,33 @@ const LandingPage = () => {
                             placeholder="1"
                         />
                     </InputGroup>
+                </div>
+
+                <div className="mb-6">
+                    <label className="label-medium font-bold text-[var(--md-sys-color-on-surface-variant)] uppercase mb-2 block ml-1">Partecipanti</label>
+                    <div className="flex gap-2 mb-3">
+                        <input
+                            type="text"
+                            value={newParticipantName}
+                            onChange={(e) => setNewParticipantName(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && addParticipant()}
+                            placeholder="Aggiungi persona..."
+                            className="flex-1 p-3 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none"
+                        />
+                        <button onClick={addParticipant} className="bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)] p-3 rounded-xl font-bold">
+                            <Plus size={20} />
+                        </button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        {newTripData.participants && newTripData.participants.map(p => (
+                            <span key={p} className="pl-3 pr-2 py-1.5 rounded-full bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] font-bold text-sm flex items-center gap-2">
+                                {p}
+                                <button onClick={() => removeParticipant(p)} className="w-5 h-5 rounded-full bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-on-surface)] flex items-center justify-center hover:bg-[#FFDAD6] hover:text-[#410002]">
+                                    <X size={12} />
+                                </button>
+                            </span>
+                        ))}
+                    </div>
                 </div>
 
                 <div className="mb-6">
