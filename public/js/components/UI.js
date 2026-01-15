@@ -47,13 +47,61 @@ const Button = ({ children, onClick, variant = "primary", className = "", icon: 
 
 const Modal = ({ isOpen, onClose, title, children }) => {
     const { X } = window;
-    if (!isOpen) return null;
-    return (
-        <div className="ui-modal-overlay">
-            <div className="ui-modal-container">
+    const { useState, useEffect } = React;
+    const [isClosing, setIsClosing] = useState(false);
+    const [shouldRender, setShouldRender] = useState(false);
+
+    useEffect(() => {
+        if (isOpen) {
+            setShouldRender(true);
+            setIsClosing(false);
+            // Prevent body scroll when modal is open
+            document.body.style.overflow = 'hidden';
+        } else if (shouldRender) {
+            setIsClosing(true);
+            const timer = setTimeout(() => {
+                setShouldRender(false);
+                setIsClosing(false);
+                // Restore body scroll when modal is closed
+                document.body.style.overflow = '';
+            }, 200); // Match the exit animation duration
+            return () => clearTimeout(timer);
+        }
+    }, [isOpen]);
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            document.body.style.overflow = '';
+        };
+    }, []);
+
+    if (!shouldRender) return null;
+
+    const handleClose = () => {
+        setIsClosing(true);
+        setTimeout(() => {
+            onClose();
+            document.body.style.overflow = '';
+        }, 200);
+    };
+
+    const handleOverlayClick = (e) => {
+        if (e.target === e.currentTarget) {
+            handleClose();
+        }
+    };
+
+    // Use Portal to render modal at body level, outside any scrollable container
+    return ReactDOM.createPortal(
+        <div
+            className={`ui-modal-overlay ${isClosing ? 'closing' : ''}`}
+            onClick={handleOverlayClick}
+        >
+            <div className="ui-modal-container" onClick={(e) => e.stopPropagation()}>
                 <div className="ui-modal-header">
                     <h3 className="ui-modal-title">{title}</h3>
-                    <button onClick={onClose} className="ui-modal-close-btn">
+                    <button onClick={handleClose} className="ui-modal-close-btn">
                         <X size={18} />
                     </button>
                 </div>
@@ -61,7 +109,8 @@ const Modal = ({ isOpen, onClose, title, children }) => {
                     {children}
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 
@@ -72,8 +121,83 @@ const InputGroup = ({ label, children }) => (
     </div>
 );
 
+// M3 Segmented Control with animated sliding pill indicator
+const SegmentedControl = ({ options, value, onChange, className = "", renderLabel, size = "default" }) => {
+    const { useRef, useLayoutEffect, useState } = React;
+    const containerRef = useRef(null);
+    const [pillStyle, setPillStyle] = useState({ width: 0, left: 0 });
+
+    useLayoutEffect(() => {
+        if (!containerRef.current) return;
+
+        const activeIndex = options.indexOf(value);
+        const buttons = containerRef.current.querySelectorAll('.segment-btn');
+
+        if (buttons[activeIndex]) {
+            const button = buttons[activeIndex];
+            const containerRect = containerRef.current.getBoundingClientRect();
+            const buttonRect = button.getBoundingClientRect();
+
+            setPillStyle({
+                width: buttonRect.width,
+                left: buttonRect.left - containerRect.left
+            });
+        }
+    }, [value, options]);
+
+    const sizeClass = size === "large" ? "large" : "";
+
+    return (
+        <div
+            ref={containerRef}
+            className={`segmented-control-container ${sizeClass} ${className}`}
+        >
+            {/* Animated Pill Indicator */}
+            <div
+                className="segmented-pill-indicator"
+                style={{
+                    width: `${pillStyle.width}px`,
+                    transform: `translateX(${pillStyle.left}px)`
+                }}
+            />
+
+            {/* Buttons */}
+            {options.map((option, index) => (
+                <button
+                    key={option}
+                    onClick={() => onChange(option)}
+                    className={`segment-btn ${value === option ? 'active' : ''}`}
+                >
+                    {renderLabel ? renderLabel(option, value === option) : option}
+                </button>
+            ))}
+        </div>
+    );
+};
+
+// Page transition wrapper for slide up/down animations
+const PageTransition = ({ children, isEntering = true }) => {
+    const { useState, useEffect } = React;
+    const [animationClass, setAnimationClass] = useState(isEntering ? 'page-enter' : '');
+
+    useEffect(() => {
+        if (isEntering) {
+            setAnimationClass('page-enter');
+        }
+    }, [isEntering]);
+
+    return (
+        <div className={`page-transition-wrapper ${animationClass}`}>
+            {children}
+        </div>
+    );
+};
+
 window.Card = Card;
 window.Badge = Badge;
 window.Button = Button;
 window.Modal = Modal;
 window.InputGroup = InputGroup;
+window.SegmentedControl = SegmentedControl;
+window.PageTransition = PageTransition;
+

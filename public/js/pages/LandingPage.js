@@ -87,125 +87,114 @@ const LandingPage = () => {
     };
 
     return (
-        <div className="landing-container">
-            {/* Modern Header */}
-            <header className="landing-header">
-                <div className="landing-header-content">
-                    <img src="img/icon-192.png" alt="App Icon" className="landing-app-icon" />
-                    <h1 className="landing-title">
-                        Trip Planner
-                    </h1>
+        <div className="landing-container bg-[var(--md-sys-color-surface)] min-h-screen pb-24">
+            {/* Expressive Header */}
+            <header className="pt-12 pb-8 px-6">
+                <div className="flex justify-between items-center mb-6">
+                    <img src="img/icon-192.png" alt="App Icon" className="w-12 h-12 rounded-[16px] shadow-sm" />
+                    {/* Add Settings or Profile Icon here if needed */}
                 </div>
+                <h1 className="display-large leading-tight text-[var(--md-sys-color-on-surface)]">
+                    Trip<br />Planner
+                </h1>
             </header>
 
-            <div className="landing-content">
-                <div>
-                    <h2 className="landing-section-title">I tuoi Viaggi</h2>
-                    <p className="landing-subtitle">Pronto per la prossima avventura?</p>
+            <div className="px-6">
+                <div className="flex justify-between items-end mb-4">
+                    <h2 className="headline-small font-bold text-[var(--md-sys-color-on-surface-variant)]">I tuoi Viaggi</h2>
+                    <span className="label-medium text-[var(--md-sys-color-primary)] bg-[var(--md-sys-color-primary-container)] px-3 py-1 rounded-full">{trips.length}</span>
                 </div>
 
                 {trips.length === 0 && (
-                    <div className="landing-empty">
-                        <div className="landing-empty-icon">
-                            <MapPin size={24} className="text-gray-400" />
+                    <div className="flex flex-col items-center justify-center py-12 text-center opacity-60">
+                        <div className="w-20 h-20 bg-[var(--md-sys-color-surface-container-highest)] rounded-full flex items-center justify-center mb-4 text-[var(--md-sys-color-on-surface-variant)]">
+                            <MapPin size={32} />
                         </div>
-                        <p className="text-gray-500">Nessun viaggio trovato.</p>
-                        <p className="text-sm text-gray-400">Creane uno nuovo per iniziare!</p>
+                        <p className="title-medium text-[var(--md-sys-color-on-surface-variant)]">Nessun viaggio trovato.</p>
+                        <p className="body-medium text-[var(--md-sys-color-outline)] mt-1">Inizia a pianificare la tua prossima avventura!</p>
                     </div>
                 )}
 
-                <div className="landing-grid">
+                <div className="grid grid-cols-1 gap-4">
                     {trips.map(trip => (
                         <div
                             key={trip.id}
                             onClick={() => onSelectTrip(trip.id)}
-                            className="trip-card group"
+                            className="group relative bg-[var(--md-sys-color-surface-container-low)] rounded-[28px] p-0 overflow-hidden shadow-sm transition-all hover:scale-[1.02] active:scale-95 cursor-pointer border border-[var(--md-sys-color-outline-variant)]"
                         >
-                            {/* Color Accent (Always Visible) */}
-                            <div
-                                className="trip-card-accent"
-                                style={{ backgroundColor: trip.color || '#000000' }}
-                            />
+                            {/* Large Color Splash */}
+                            <div className="absolute top-0 right-0 w-32 h-32 rounded-bl-[100px] opacity-10 transition-transform group-hover:scale-110" style={{ backgroundColor: trip.color }}></div>
 
-                            <div className="trip-card-header">
-                                <div className="trip-card-main">
-                                    <div className="trip-card-title-row">
-                                        <span className="trip-card-flag">{trip.flag}</span>
-                                        <h3 className="trip-card-title">
-                                            {trip.title}
-                                        </h3>
+                            <div className="p-6 relative z-10">
+                                <div className="flex justify-between items-start mb-2">
+                                    <div className="w-14 h-14 rounded-full bg-[var(--md-sys-color-surface)] flex items-center justify-center text-3xl shadow-sm">
+                                        {trip.flag}
                                     </div>
-                                    <p className="trip-card-date">
-                                        <Calendar size={12} />
-                                        {trip.dates}
-                                    </p>
-                                </div>
-                                <div className="trip-card-actions">
                                     <button
                                         onClick={(e) => { e.stopPropagation(); handleDeleteTrip(trip.id, trip.title); }}
-                                        className="trip-delete-btn"
-                                        title="Elimina Viaggio"
+                                        className="w-10 h-10 rounded-full bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-on-surface-variant)] flex items-center justify-center hover:bg-[#FFDAD6] hover:text-[#410002] transition-colors"
                                     >
                                         <Trash size={18} />
                                     </button>
                                 </div>
-                            </div>
 
-                            <div className="trip-card-footer">
-                                <span className="trip-card-tag">
-                                    Viaggio
-                                </span>
-                                <div className="trip-card-arrow-container">
-                                    <ArrowDown size={16} className="trip-card-arrow" />
+                                <h3 className="headline-medium font-bold text-[var(--md-sys-color-on-surface)] mb-1 leading-tight">
+                                    {trip.title}
+                                </h3>
+                                <div className="flex items-center gap-2 text-[var(--md-sys-color-on-surface-variant)]">
+                                    <Calendar size={16} />
+                                    <span className="label-large opacity-80">{trip.dates}</span>
                                 </div>
                             </div>
+
+                            {/* Decorative Bottom Stripe */}
+                            <div className="h-2 w-full mt-2" style={{ backgroundColor: trip.color }}></div>
                         </div>
                     ))}
                 </div>
             </div>
 
-            {/* Floating Action Button (FAB) for Create */}
-            <div className="fab-create">
+            {/* Floating Action Button (FAB) for Create - M3 Large FAB */}
+            <div className="fixed bottom-6 right-6 z-20">
                 <button
                     onClick={() => setIsCreating(true)}
-                    className="fab-btn group"
+                    className="h-16 w-16 rounded-[20px] bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)] shadow-lg flex items-center justify-center transition-transform hover:scale-110 active:scale-90"
                 >
-                    <Plus size={24} className="fab-icon" />
-                    <span className="fab-label">Nuovo</span>
+                    <Plus size={32} />
                 </button>
             </div>
 
             {/* Confirmation Modal */}
             <Modal isOpen={confirmModal.isOpen} onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })} title={confirmModal.title}>
-                <p className="text-gray-600 mb-6">{confirmModal.message}</p>
+                <p className="text-[var(--md-sys-color-on-surface-variant)] mb-6 leading-relaxed">{confirmModal.message}</p>
                 <div className="grid grid-cols-2 gap-3">
                     <Button variant="outline" onClick={() => setConfirmModal({ ...confirmModal, isOpen: false })}>
                         Annulla
                     </Button>
-                    <Button variant="primary" onClick={() => { confirmModal.onConfirm && confirmModal.onConfirm(); setConfirmModal({ ...confirmModal, isOpen: false }); }} className="bg-red-600 hover:bg-red-700 text-white border-0">
+                    <Button variant="primary" onClick={() => { confirmModal.onConfirm && confirmModal.onConfirm(); setConfirmModal({ ...confirmModal, isOpen: false }); }} className="bg-[var(--md-sys-color-error)] text-[var(--md-sys-color-on-error)] border-0">
                         Conferma
                     </Button>
                 </div>
             </Modal>
 
-            {/* Create Trip Modal */}
+            {/* Create Trip Modal - Using Global Modal Component */}
             <Modal isOpen={isCreating} onClose={() => setIsCreating(false)} title="Nuovo Viaggio">
                 <InputGroup label="Nome Viaggio">
                     <input
                         type="text"
                         value={newTripData.title}
                         onChange={e => setNewTripData({ ...newTripData, title: e.target.value })}
-                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-black focus:outline-none transition-colors"
+                        className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl focus:ring-2 focus:ring-[var(--md-sys-color-primary)] outline-none transition-all placeholder:opacity-50 font-bold text-lg"
                         placeholder="Es. Londra 2026"
                     />
                 </InputGroup>
                 <div className="grid grid-cols-2 gap-3">
-                    <InputGroup label="Bandiera (Emoji)">
+                    <InputGroup label="Bandiera">
                         <input
                             type="text"
                             value={newTripData.flag}
                             onChange={e => setNewTripData({ ...newTripData, flag: e.target.value })}
-                            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-black focus:outline-none transition-colors text-center text-lg"
+                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none text-center text-2xl"
                             placeholder="🇬🇧"
                         />
                     </InputGroup>
@@ -214,18 +203,18 @@ const LandingPage = () => {
                             type="text"
                             value={newTripData.dates}
                             onChange={e => setNewTripData({ ...newTripData, dates: e.target.value })}
-                            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-black focus:outline-none transition-colors"
+                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none text-sm font-medium"
                             placeholder="Es. 25 Feb - 2 Mar"
                         />
                     </InputGroup>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                    <InputGroup label="Valuta (Simbolo)">
+                    <InputGroup label="Valuta">
                         <input
                             type="text"
                             value={newTripData.currencySymbol}
                             onChange={e => setNewTripData({ ...newTripData, currencySymbol: e.target.value })}
-                            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-black focus:outline-none transition-colors text-center text-lg"
+                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none text-center text-lg font-bold"
                             placeholder="£"
                         />
                     </InputGroup>
@@ -235,30 +224,32 @@ const LandingPage = () => {
                             step="0.01"
                             value={newTripData.exchangeRate}
                             onChange={e => setNewTripData({ ...newTripData, exchangeRate: e.target.value })}
-                            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-black focus:outline-none transition-colors"
+                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none text-center font-bold"
                             placeholder="1"
                         />
                     </InputGroup>
                 </div>
 
                 <div className="mb-6">
-                    <label className="color-picker-label">Colore Principale</label>
-                    <div className="color-picker-grid">
+                    <label className="label-medium font-bold text-[var(--md-sys-color-on-surface-variant)] uppercase mb-2 block ml-1">Colore Tema</label>
+                    <div className="flex flex-wrap gap-3">
                         {colors.map(c => (
                             <button
                                 key={c.hex}
                                 onClick={() => setNewTripData({ ...newTripData, color: c.hex })}
-                                className={`color-swatch ${newTripData.color === c.hex ? 'selected' : ''}`}
+                                className={`w-12 h-12 rounded-full flex items-center justify-center transition-transform hover:scale-110 ${newTripData.color === c.hex ? 'ring-4 ring-offset-2 ring-[var(--md-sys-color-primary)]' : ''}`}
                                 style={{ backgroundColor: c.hex }}
                                 title={c.name}
                             >
-                                {newTripData.color === c.hex && <Check size={14} className="text-white drop-shadow-md" />}
+                                {newTripData.color === c.hex && <Check size={20} className="text-white drop-shadow-md" />}
                             </button>
                         ))}
                     </div>
                 </div>
 
-                <Button onClick={handleCreateTrip}>Crea Viaggio</Button>
+                <Button onClick={handleCreateTrip} className="w-full py-4 rounded-full text-lg bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] shadow-lg hover:shadow-xl translate-y-0 hover:-translate-y-1 transition-all">
+                    Inizia Avventura
+                </Button>
             </Modal>
         </div>
     );

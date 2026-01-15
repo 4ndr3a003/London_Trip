@@ -1,11 +1,13 @@
+// Theme utility loaded globally
+
 const TripDashboard = () => {
     const { useParams, useNavigate, useLocation } = window.ReactRouterDOM;
     // Lazy access to globals
     const {
-        Card, Badge, Button, Modal, InputGroup,
+        Card, Badge, Button, Modal, InputGroup, SegmentedControl,
         MapPin, Train, PoundSterling, Euro, DollarSign, CheckCircle, AlertCircle, Plus, X,
         Edit, Trash, User, Smartphone, Search, Minus, Calendar, Clock, Check, ArrowDown,
-        Backpack, FileText, LinkIcon, RefreshCw,
+        Backpack, FileText, LinkIcon, RefreshCw, Hourglass,
         BackpackTab, DocumentsTab
     } = window;
 
@@ -14,7 +16,16 @@ const TripDashboard = () => {
 
     const activeTab = tab || "itinerary";
     const setActiveTab = (newTab) => navigate(`/trip/${tripId}/${newTab}`);
-    const onBack = () => navigate('/');
+
+    // Page transition state
+    const [isExiting, setIsExiting] = useState(false);
+
+    const onBack = () => {
+        setIsExiting(true);
+        setTimeout(() => {
+            navigate('/');
+        }, 400); // Match exit animation duration
+    };
 
     // State
     const [itinerary, setItinerary] = useState([]);
@@ -23,6 +34,14 @@ const TripDashboard = () => {
     const [expenses, setExpenses] = useState([]);
 
     const [tripDetails, setTripDetails] = useState({ title: "Londra 2026", dates: "25 Feb - 02 Mar", flag: "🇬🇧", color: "#000000", currencySymbol: "£", exchangeRate: 1.15 });
+
+
+    // Theme Effect
+    useEffect(() => {
+        if (tripDetails.color) {
+            applyTheme(tripDetails.color);
+        }
+    }, [tripDetails.color]);
 
     const [activeModal, setActiveModal] = useState(null);
     const [editingId, setEditingId] = useState(null);
@@ -190,259 +209,424 @@ const TripDashboard = () => {
     const colors = [{ hex: "#000000", name: "Nero" }, { hex: "#dc2626", name: "Rosso" }, { hex: "#2563eb", name: "Blu" }, { hex: "#16a34a", name: "Verde" }, { hex: "#d97706", name: "Arancione" }, { hex: "#9333ea", name: "Viola" }, { hex: "#db2777", name: "Rosa" }, { hex: "#0891b2", name: "Ciano" }];
 
     return (
-        <div className="dashboard-container">
-            <header className="dashboard-header" style={{ backgroundColor: tripDetails.color || '#000000' }}>
-                <div className="dashboard-header-inner">
-                    <div onClick={onBack} className="dashboard-back-btn">
-                        <ArrowDown size={20} className="dashboard-back-icon" />
-                    </div>
-                    <div className="dashboard-title-container">
-                        <h1 className="dashboard-title">
-                            <span>{tripDetails.flag}</span> {tripDetails.title}
-                            <button onClick={() => { setNewItemTripDetails(tripDetails); setActiveModal('tripDetails'); }} className="dashboard-edit-btn">
-                                <Edit size={14} />
+        <div className={`dashboard-container page-transition-wrapper ${isExiting ? 'page-exit' : 'page-enter'}`} style={{ background: `linear-gradient(180deg, var(--md-sys-color-primary-container) 0%, var(--md-sys-color-surface) 35%)` }}>
+            {/* Expressive Header - Balanced Layout */}
+            <header className="pt-6 pb-4 px-6">
+                <div className="flex justify-between items-start">
+                    {/* Left: Back Button + Install */}
+                    <div className="flex flex-col items-start gap-2">
+                        <div onClick={onBack} className="w-12 h-12 rounded-full flex items-center justify-center cursor-pointer text-[var(--md-sys-color-primary)] hover:bg-[var(--md-sys-color-primary)]/10 transition-colors active:scale-95">
+                            <ArrowDown size={28} />
+                        </div>
+                        {deferredPrompt && (
+                            <button onClick={(e) => { e.stopPropagation(); handleInstallClick(); }} className="bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] px-4 py-2 rounded-full font-bold text-sm shadow-lg flex items-center gap-2">
+                                <Smartphone size={16} /> <span>Installa</span>
                             </button>
-                        </h1>
+                        )}
                     </div>
-                    <div className="dashboard-dates-badge">{tripDetails.dates}</div>
+
+                    {/* Right: Trip Info */}
+                    <div className="flex flex-col items-end text-right cursor-pointer" onClick={() => { setNewItemTripDetails(tripDetails); setActiveModal('tripDetails'); }}>
+                        <span className="text-4xl hover:scale-110 transition-transform mb-1">{tripDetails.flag}</span>
+                        <h1 className="headline-large leading-tight text-[var(--md-sys-color-primary)] font-bold">
+                            {tripDetails.title}
+                        </h1>
+                        <span className="label-large uppercase tracking-widest text-[var(--md-sys-color-on-primary-container)] opacity-70 mt-1">{tripDetails.dates}</span>
+                    </div>
                 </div>
-                {deferredPrompt && (
-                    <button onClick={handleInstallClick} className="dashboard-install-btn">
-                        <Smartphone size={14} /> <span>Installa App</span>
-                    </button>
-                )}
             </header>
 
-            <div className="stats-grid">
-                <Card className="stats-card green">
-                    <span className="stats-label">Già Pagato</span>
-                    <div className="flex flex-col items-center"><span className="stats-value">€ {totalPaidEUR.toFixed(2)}</span></div>
-                    <span className="stats-sub">€ {(totalPaidEUR / 2).toFixed(2)} a testa</span>
-                </Card>
-                <Card className="stats-card red">
-                    <span className="stats-label">Previsto ({TRIP_CURRENCY})</span>
-                    <span className="stats-value">{TRIP_CURRENCY} {toPayForeign.toFixed(2)}</span>
-                    <span className="stats-sub">{TRIP_CURRENCY} {(toPayForeign / 2).toFixed(2)} a testa</span>
-                </Card>
-            </div>
+            {/* Content Area - Rounded Top with Shadow Separator */}
+            <div className="flex-1 bg-[var(--md-sys-color-surface-container)] rounded-t-[32px] overflow-hidden flex flex-col shadow-[0_-8px_30px_rgba(0,0,0,0.08)] relative z-0 border-t border-[var(--md-sys-color-outline-variant)]/20">
+                {/* Desktop Nav removed or redundant for mobile-first view? Keeping it if needed but hiding for now or simplifying */}
+                {/* We rely on Bottom Nav for mobile. */}
 
-            <div className="desktop-nav-container">
-                <div className="desktop-nav-inner">
-                    {["itinerary", "attractions", "expenses", "backpack", "documents"].map(t => (
-                        <button key={t} onClick={() => setActiveTab(t)} className={`desktop-nav-btn ${activeTab === t ? 'active' : ''}`}>{t.charAt(0).toUpperCase() + t.slice(1)}</button>
-                    ))}
-                </div>
-            </div>
+                <div className="p-4 flex-1 overflow-y-auto scroller pb-24 space-y-4 pt-6">
+                    {activeTab === "attractions" && (
+                        <div className="space-y-4">
 
-            <div className="dashboard-content scroller">
-                {activeTab === "attractions" && (
-                    <div className="space-y-4">
-                        <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 space-y-3">
-                            <div className="flex bg-gray-100 p-1 rounded-lg">
-                                <button onClick={() => setPlacesViewMode("places")} className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${placesViewMode === 'places' ? 'bg-white text-black shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}><span className="flex items-center justify-center gap-2"><MapPin size={14} /> Luoghi</span></button>
-                                <button onClick={() => setPlacesViewMode("transport")} className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${placesViewMode === 'transport' ? 'bg-white text-black shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}><span className="flex items-center justify-center gap-2"><Train size={14} /> Mezzi</span></button>
-                            </div>
+                            {/* Top Layout: View Toggle with sliding pill */}
+                            <SegmentedControl
+                                options={["places", "transport"]}
+                                value={placesViewMode}
+                                onChange={setPlacesViewMode}
+                                size="large"
+                                renderLabel={(option, isActive) => (
+                                    <>
+                                        {option === "places" ? <MapPin size={18} /> : <Train size={18} />}
+                                        {option === "places" ? "LUOGHI" : "MEZZI"}
+                                    </>
+                                )}
+                            />
+
                             {placesViewMode === "places" && (
-                                <>
-                                    <div className="filter-bar">
-                                        <div className="search-row">
-                                            <Search size={18} className="text-gray-400" />
-                                            <input type="text" placeholder="Cerca..." className="search-input" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-                                        </div>
-                                        <div className="flex justify-between items-center">
-                                            <div className="filter-toggle-row">
-                                                {["Tutti", "Da Visitare", "Visitati"].map(s => (
-                                                    <button key={s} onClick={() => setFilterStatusItinerary(s)} className={`filter-toggle-btn ${filterStatusItinerary === s ? 'active' : ''}`}>{s}</button>
-                                                ))}
-                                            </div>
-                                            <button onClick={() => setSortOrder(prev => prev === 'alpha' ? 'default' : 'alpha')} className="p-1.5 rounded-lg text-xs font-bold bg-blue-50 text-blue-600">{sortOrder === 'alpha' ? 'A-Z' : 'Default'}</button>
-                                        </div>
-                                        <div className="filter-tags-row">
-                                            <button onClick={() => setFilterCat("Tutti")} className={`filter-tag ${filterCat === "Tutti" ? 'active' : ''}`}>Tutti</button>
-                                            {categories.filter(c => c !== "Tutti").map(c => (
-                                                <button key={c} onClick={() => setFilterCat(c)} className={`filter-tag ${filterCat === c ? 'active' : ''}`}>{c}</button>
-                                            ))}
-                                        </div>
+                                <div className="flex flex-col gap-3">
+                                    {/* Filter Chips Row 1 - Status + A-Z */}
+                                    <div className="flex justify-between items-center gap-2 py-1">
+                                        <SegmentedControl
+                                            options={["Tutti", "Da Visitare", "Visitati"]}
+                                            value={filterStatusItinerary}
+                                            onChange={setFilterStatusItinerary}
+                                            className="flex-1 mr-2"
+                                        />
+                                        <button
+                                            onClick={() => setSortOrder(prev => prev === 'alpha' ? 'default' : 'alpha')}
+                                            className={`p-2 rounded-full text-sm font-bold shrink-0 transition-colors ${sortOrder === 'alpha'
+                                                ? 'bg-[var(--md-sys-color-tertiary-container)] text-[var(--md-sys-color-on-tertiary-container)]'
+                                                : 'bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] border border-[var(--md-sys-color-outline)]'
+                                                }`}
+                                        >
+                                            {sortOrder === 'alpha' ? 'A-Z' : 'Default'}
+                                        </button>
                                     </div>
-                                </>
+
+                                    {/* Search Bar - M3 Filled Tonal */}
+                                    <div className="flex items-center gap-3 bg-[var(--md-sys-color-surface-container-high)] rounded-full px-4 py-3 transition-colors focus-within:bg-[var(--md-sys-color-surface-container-highest)]">
+                                        <Search size={20} className="text-[var(--md-sys-color-on-surface-variant)]" />
+                                        <input
+                                            type="text"
+                                            placeholder="Cerca attrazione..."
+                                            className="bg-transparent border-none outline-none w-full text-base text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                        />
+                                    </div>
+
+                                    {/* Filter Chips Row 2 - Categories */}
+                                    <div className="flex gap-2 overflow-x-auto scroller no-scrollbar pb-1">
+                                        <button
+                                            onClick={() => setFilterCat("Tutti")}
+                                            className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all border ${filterCat === "Tutti"
+                                                ? 'bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] border-transparent'
+                                                : 'bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] border-[var(--md-sys-color-outline)] hover:bg-[var(--md-sys-color-surface-container-highest)]'
+                                                }`}
+                                        >
+                                            Tutti
+                                        </button>
+                                        {categories.filter(c => c !== "Tutti").map(c => (
+                                            <button
+                                                key={c}
+                                                onClick={() => setFilterCat(c)}
+                                                className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all border ${filterCat === c
+                                                    ? 'bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] border-transparent'
+                                                    : 'bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] border-[var(--md-sys-color-outline)] hover:bg-[var(--md-sys-color-surface-container-highest)]'
+                                                    }`}
+                                            >
+                                                {filterCat === c && <Check size={14} className="inline mr-1" />}
+                                                {c}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                            {placesViewMode === "places" && (
+                                <div className="space-y-4">
+                                    <Button onClick={() => { setEditingId(null); setNewItemItinerary({ nome: "", categoria: "Museo", quartiere: "", durata: "", orari: "", eccezioni: "", img: "", mapEmbed: "" }); setActiveModal('itinerary'); }} icon={Plus} className="w-full shadow-md">Aggiungi Attrazione</Button>
+                                    {filteredItinerary.map(place => (
+                                        <div key={place.id} className="relative group rounded-[28px] overflow-hidden bg-[var(--md-sys-color-surface-container-low)] shadow-sm transition-all hover:shadow-md mb-4">
+                                            {/* Image Area - Taller and distinctive */}
+                                            <div className="relative h-56 w-full" onClick={() => setViewingItem(place)}>
+                                                {place.img ? (
+                                                    <img src={place.img} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                                                ) : (
+                                                    <div className="w-full h-full bg-[var(--md-sys-color-surface-variant)] flex items-center justify-center text-[var(--md-sys-color-on-surface-variant)]">
+                                                        <MapPin size={48} className="opacity-20" />
+                                                    </div>
+                                                )}
+
+                                                {/* Gradient Overlay */}
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none"></div>
+
+                                                {/* Float Actions - Always Visible */}
+                                                <div className="absolute top-4 right-4 flex flex-col gap-2 z-20">
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); setNewItemItinerary(place); setEditingId(place.id); setActiveModal('itinerary'); }}
+                                                        className="w-10 h-10 rounded-[12px] bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-on-surface)] flex items-center justify-center shadow-md active:scale-90 transition-transform"
+                                                    >
+                                                        <Edit size={18} />
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); handleDeleteItinerary(place.id); }}
+                                                        className="w-10 h-10 rounded-[12px] bg-[#FFDAD6] text-[#410002] flex items-center justify-center shadow-md active:scale-90 transition-transform"
+                                                    >
+                                                        <Trash size={18} />
+                                                    </button>
+                                                </div>
+
+                                                {/* Title & Category on Image */}
+                                                <div className="absolute bottom-4 left-4 right-4 text-white z-10 pointer-events-none">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <span className={`backdrop-blur-md px-2 py-0.5 rounded-md text-xs font-bold uppercase tracking-wide border border-white/10 ${place.categoria === 'Museo' ? 'bg-fuchsia-100 text-fuchsia-900' :
+                                                            place.categoria === 'Parco' ? 'bg-emerald-100 text-emerald-900' :
+                                                                place.categoria === 'Ristorante' ? 'bg-orange-100 text-orange-900' :
+                                                                    place.categoria === 'Mercato' ? 'bg-yellow-100 text-yellow-900' :
+                                                                        place.categoria === 'Monumento' ? 'bg-indigo-100 text-indigo-900' :
+                                                                            place.categoria === 'Shopping' ? 'bg-pink-100 text-pink-900' :
+                                                                                'bg-slate-100 text-slate-900'
+                                                            }`}>
+                                                            {place.categoria}
+                                                        </span>
+                                                        {place.quartiere && <span className="text-xs opacity-90 font-medium flex items-center gap-1"><MapPin size={10} /> {place.quartiere}</span>}
+                                                    </div>
+                                                    <h3 className="headline-small leading-tight font-bold text-white drop-shadow-sm">{place.nome}</h3>
+                                                </div>
+                                            </div>
+
+                                            {/* Info Bar */}
+                                            <div className="p-4 flex justify-between items-center">
+                                                <div className="flex gap-2 text-[var(--md-sys-color-on-surface-variant)] text-sm font-medium">
+                                                    {place.orari && <span className="flex items-center gap-1 bg-[var(--md-sys-color-surface)] px-3 py-1.5 rounded-full"><Clock size={14} /> {place.orari}</span>}
+                                                    {place.durata && <span className="flex items-center gap-1 bg-[var(--md-sys-color-surface)] px-3 py-1.5 rounded-full"><Hourglass size={14} /> {place.durata}</span>}
+                                                </div>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); toggleVisit(place.id, place.visited); }}
+                                                    className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${place.visited ? 'bg-[#C4EED0] text-[#07210F]' : 'bg-[var(--md-sys-color-surface-variant)] text-[var(--md-sys-color-on-surface-variant)]'}`}
+                                                >
+                                                    {place.visited ? <Check size={24} strokeWidth={3} /> : <CheckCircle size={24} className="opacity-50" />}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            {placesViewMode === "transport" && (
+                                <div className="space-y-4">
+                                    <Button onClick={() => setActiveModal('transport')} icon={Plus} className="w-full shadow-md">Aggiungi Spostamento</Button>
+                                    {transport.map(t => (
+                                        <div key={t.id} className="relative bg-[var(--md-sys-color-surface-container)] rounded-[20px] p-0 overflow-hidden mb-4 shadow-sm border border-[var(--md-sys-color-outline-variant)]">
+                                            {/* Header Stripe */}
+                                            <div className="h-2 w-full bg-[var(--md-sys-color-primary)] opacity-80"></div>
+
+                                            <div className="p-5">
+                                                <div className="flex justify-between items-start mb-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-full bg-[var(--md-sys-color-secondary-container)] flex items-center justify-center text-[var(--md-sys-color-on-secondary-container)]">
+                                                            <Train size={20} />
+                                                        </div>
+                                                        <div>
+                                                            <h3 className="title-medium font-bold text-[var(--md-sys-color-on-surface)]">{t.dettaglio}</h3>
+                                                            <span className="label-small text-[var(--md-sys-color-on-surface-variant)] uppercase tracking-wider">{t.data} • {t.ora}</span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex gap-1">
+                                                        <button onClick={() => { setNewItemTransport(t); setEditingId(t.id); setActiveModal('transport'); }} className="p-2 text-[var(--md-sys-color-on-surface-variant)] hover:bg-[#F0F4F8] rounded-full"><Edit size={18} /></button>
+                                                        <button onClick={() => handleDeleteTransport(t.id)} className="p-2 text-[var(--md-sys-color-on-surface-variant)] hover:bg-[#FFDAD6] hover:text-[#410002] rounded-full"><Trash size={18} /></button>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex gap-4 items-center mb-5">
+                                                    <div className="flex-1">
+                                                        <div className="text-[15px] font-bold text-[var(--md-sys-color-on-surface)]">{t.partenza}</div>
+                                                        <div className="h-4 border-l-2 border-dashed border-[#8E9193] ml-2 my-1"></div>
+                                                        <div className="text-[15px] font-bold text-[var(--md-sys-color-on-surface)]">{t.arrivo}</div>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <span className="headline-small font-bold text-[var(--md-sys-color-primary)]">{t.costo}</span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex gap-2">
+                                                    <button onClick={() => toggleTransportBooked(t.id, t.prenotato)} className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-colors ${t.prenotato ? 'bg-[#E8DEF8] text-[#1D192B] border-transparent' : 'border-[var(--md-sys-color-outline)] text-[var(--md-sys-color-on-surface-variant)]'}`}>
+                                                        {t.prenotato ? 'Prenotato' : 'Prenota'}
+                                                    </button>
+                                                    <button onClick={() => toggleTransportPaid(t.id, t.pagato)} className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-colors ${t.pagato ? 'bg-[#C4EED0] text-[#07210F] border-transparent' : 'border-[var(--md-sys-color-outline)] text-[var(--md-sys-color-on-surface-variant)]'}`}>
+                                                        {t.pagato ? 'Pagato' : 'Paga'}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             )}
                         </div>
-                        {placesViewMode === "places" && (
-                            <div className="space-y-4">
-                                <Button variant="outline" onClick={() => { setEditingId(null); setNewItemItinerary({ nome: "", categoria: "Museo", quartiere: "", durata: "", orari: "", eccezioni: "", img: "", mapEmbed: "" }); setActiveModal('itinerary'); }} icon={Plus}>Aggiungi Attrazione</Button>
-                                {filteredItinerary.map(place => (
-                                    <Card key={place.id} onClick={() => setViewingItem(place)} noPadding className="relative overflow-hidden cursor-pointer group">
-                                        <div className="relative w-full h-48 bg-gray-200 overflow-hidden group-hover:brightness-[0.98] transition-all">
-                                            {place.img ? <img src={place.img} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" /> : <div className="w-full h-full flex items-center justify-center text-gray-300"><MapPin size={48} className="opacity-20" /></div>}
-                                            <div className="absolute top-2 right-2 flex gap-1 z-20"><button onClick={(e) => { e.stopPropagation(); setNewItemItinerary(place); setEditingId(place.id); setActiveModal('itinerary'); }} className="bg-white/90 p-1.5 rounded-lg hover:bg-white"><Edit size={16} /></button><button onClick={(e) => { e.stopPropagation(); handleDeleteItinerary(place.id); }} className="bg-white/90 p-1.5 rounded-lg hover:bg-white hover:text-red-600"><Trash size={16} /></button></div>
-                                            <div className="absolute top-3 left-3 z-20"><Badge type={place.categoria}>{place.categoria}</Badge></div>
-                                        </div>
-                                        <div className="p-4 flex flex-col bg-white">
-                                            <div className="flex justify-between items-start mb-3"><h3 className="font-bold text-gray-800 text-xl truncate">{place.nome}</h3><button onClick={(e) => { e.stopPropagation(); toggleVisit(place.id, place.visited); }} className={`p-1.5 rounded-full ${place.visited ? 'text-green-600 bg-green-50' : 'text-gray-300'}`}><CheckCircle size={24} /></button></div>
-                                            <div className="grid grid-cols-2 gap-2 text-xs"><div className="bg-gray-50 p-2 rounded-lg">Orari: <span className="font-semibold block">{place.orari}</span></div><div className="bg-gray-50 p-2 rounded-lg">Durata: <span className="font-semibold block">{place.durata}</span></div></div>
-                                        </div>
-                                    </Card>
-                                ))}
+                    )}
+                    {activeTab === "expenses" && (
+                        <div className="space-y-4">
+                            {/* Moved Stats Here - Only for Expenses - Material 3 Expressive Complementary Shapes */}
+                            <div className="grid grid-cols-2 gap-3">
+                                {/* GIÀ PAGATO - Left rounded shape */}
+                                <div className="payment-card payment-card-paid relative overflow-hidden bg-gradient-to-br from-[#C4EED0] via-[#D8F5E0] to-[#E6F9EE] p-5 rounded-l-[32px] rounded-r-[12px] flex flex-col items-start gap-2 text-[#0A5C1F] shadow-lg border-2 border-[#A3E4B5]/50">
+                                    {/* Decorative background element */}
+                                    <div className="absolute -right-4 -top-4 w-20 h-20 rounded-full bg-[#0A5C1F]/5"></div>
+                                    <div className="absolute -right-1 -bottom-1 w-12 h-12 rounded-full bg-[#0A5C1F]/8"></div>
+                                    {/* Icon */}
+                                    <div className="w-8 h-8 rounded-full bg-[#0A5C1F]/15 flex items-center justify-center mb-1">
+                                        <Check size={18} strokeWidth={3} className="text-[#0A5C1F]" />
+                                    </div>
+                                    <span className="label-medium font-bold uppercase tracking-wider opacity-80">Già Pagato</span>
+                                    <span className="display-small font-black tracking-tight">€{Math.round(totalPaidEUR)}</span>
+                                    <span className="label-small font-semibold opacity-70 bg-[#0A5C1F]/10 px-2 py-0.5 rounded-full">€{(totalPaidEUR / 2).toFixed(0)} /testa</span>
+                                </div>
+                                {/* PREVISTO - Right rounded shape */}
+                                <div className="payment-card payment-card-due relative overflow-hidden bg-gradient-to-bl from-[#FECACA] via-[#FFD9D9] to-[#FFE8E8] p-5 rounded-r-[32px] rounded-l-[12px] flex flex-col items-end gap-2 text-[#991B1B] shadow-lg border-2 border-[#FCA5A5]/50">
+                                    {/* Decorative background element */}
+                                    <div className="absolute -left-4 -top-4 w-20 h-20 rounded-full bg-[#991B1B]/5"></div>
+                                    <div className="absolute -left-1 -bottom-1 w-12 h-12 rounded-full bg-[#991B1B]/8"></div>
+                                    {/* Icon */}
+                                    <div className="w-8 h-8 rounded-full bg-[#991B1B]/15 flex items-center justify-center mb-1">
+                                        <Hourglass size={18} strokeWidth={2.5} className="text-[#991B1B]" />
+                                    </div>
+                                    <span className="label-medium font-bold uppercase tracking-wider opacity-80 text-right">Previsto</span>
+                                    <span className="display-small font-black tracking-tight">{TRIP_CURRENCY}{Math.round(toPayForeign)}</span>
+                                    <span className="label-small font-semibold opacity-70 bg-[#991B1B]/10 px-2 py-0.5 rounded-full">{TRIP_CURRENCY}{(toPayForeign / 2).toFixed(0)} /testa</span>
+                                </div>
                             </div>
-                        )}
-                        {placesViewMode === "transport" && (
-                            <div className="space-y-4">
-                                <Button variant="blue" onClick={() => setActiveModal('transport')} icon={Plus}>Aggiungi Viaggio</Button>
-                                {transport.map(t => (
-                                    <Card key={t.id} className="border-l-4 border-l-blue-500">
-                                        <div className="flex justify-between font-bold text-blue-900 mb-2">
-                                            <div className="flex gap-2"><Train size={18} /> {t.dettaglio}</div>
-                                            <div className="flex gap-1">
-                                                <button onClick={() => { setNewItemTransport(t); setEditingId(t.id); setActiveModal('transport'); }}><Edit size={16} /></button>
-                                                <button onClick={() => handleDeleteTransport(t.id)}><Trash size={16} /></button>
-                                            </div>
-                                        </div>
-                                        <div className="flex gap-4 mb-4">
-                                            <div className="text-center bg-blue-50/50 p-2 rounded-lg">
-                                                <div className="text-xl font-bold">{t.ora}</div>
-                                                <div className="text-[10px] bg-white text-blue-400 font-bold px-1 rounded">{t.data.split('/')[0]} Feb</div>
-                                            </div>
-                                            <div className="flex-1 flex flex-col gap-1 pl-2 border-l-2 border-gray-100">
-                                                <div>{t.partenza}</div>
-                                                <div>{t.arrivo}</div>
-                                            </div>
-                                        </div>
-                                        <div className="flex justify-between pt-3 border-t border-gray-50">
-                                            <div className="flex gap-2">
-                                                <button onClick={() => toggleTransportBooked(t.id, t.prenotato)} className={`text-[10px] px-2 py-1 rounded border ${t.prenotato ? 'bg-purple-100 text-purple-700' : 'text-gray-400'}`}>{t.prenotato ? 'Prenotato' : 'Da Prenotare'}</button>
-                                                <button onClick={() => toggleTransportPaid(t.id, t.pagato)} className={`text-[10px] px-2 py-1 rounded border ${t.pagato ? 'bg-green-100 text-green-700' : 'text-gray-400'}`}>{t.pagato ? 'Pagato' : 'Da Pagare'}</button>
-                                            </div>
-                                            <div className="text-right font-bold">{t.costo}</div>
-                                        </div>
-                                    </Card>
-                                ))}
+
+                            <div className="flex flex-col gap-3 mb-4">
+                                <div className="flex justify-between items-center gap-2 py-1">
+                                    <SegmentedControl
+                                        options={["Tutti", "Da Pagare", "Pagati"]}
+                                        value={filterStatusExpenses}
+                                        onChange={setFilterStatusExpenses}
+                                        className="flex-1 mr-2"
+                                    />
+                                    <button
+                                        onClick={() => setSortOrder(prev => prev === 'alpha' ? 'default' : 'alpha')}
+                                        className={`p-2 rounded-full text-sm font-bold shrink-0 transition-colors ${sortOrder === 'alpha'
+                                            ? 'bg-[var(--md-sys-color-tertiary-container)] text-[var(--md-sys-color-on-tertiary-container)]'
+                                            : 'bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] border border-[var(--md-sys-color-outline)]'
+                                            }`}
+                                    >
+                                        {sortOrder === 'alpha' ? 'A-Z' : 'Default'}
+                                    </button>
+                                </div>
                             </div>
-                        )}
-                    </div>
-                )}
-                {activeTab === "expenses" && (
-                    <div className="space-y-3">
-                        <div className="filter-bar flex-row justify-between items-center bg-white p-2 rounded-xl mb-0">
-                            <div className="filter-toggle-row">
-                                {["Tutti", "Da Pagare", "Pagati"].map(s => (
-                                    <button key={s} onClick={() => setFilterStatusExpenses(s)} className={`filter-toggle-btn ${filterStatusExpenses === s ? 'active' : ''}`}>{s}</button>
-                                ))}
-                            </div>
-                            <button onClick={() => setSortOrder(prev => prev === 'alpha' ? 'default' : 'alpha')} className="p-2 text-xs font-bold bg-blue-50 text-blue-600 rounded-lg">{sortOrder === 'alpha' ? 'A-Z' : 'Default'}</button>
+
+                            <Button onClick={() => { setNewItemExpense(prev => ({ ...prev, valuta: tripDetails.currencySymbol || "£" })); setActiveModal('expenses'); }} icon={Plus} className="w-full shadow-md">Aggiungi Spesa</Button>
+                            {filteredExpenses.map(e => (
+                                <div key={e.id} className="bg-[var(--md-sys-color-surface-container-low)] rounded-[24px] p-4 flex items-center justify-between shadow-sm border border-[var(--md-sys-color-outline-variant)]">
+                                    <div className="flex items-center gap-4 flex-1">
+                                        <div className={`w-12 h-12 rounded-[16px] flex items-center justify-center text-xl font-bold ${e.valuta === '€' ? 'bg-[#E6F4EA] text-[#137A2F]' : 'bg-[#FCE8E6] text-[#C5221F]'}`}>
+                                            {e.valuta}
+                                        </div>
+                                        <div className="flex-1">
+                                            <h3 className="title-medium font-bold text-[var(--md-sys-color-on-surface)]">{e.item}</h3>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                {e.chi && <span className="text-[10px] bg-[var(--md-sys-color-surface-variant)] px-2 py-0.5 rounded-md font-bold text-[var(--md-sys-color-on-surface-variant)] uppercase">{e.chi.split(' ')[0]}</span>}
+                                                {e.prenotato && <span className="text-[10px] text-[#6750A4] bg-[#E8DEF8] px-2 py-0.5 rounded-md font-bold">PRENOTATO</span>}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-col items-end gap-1">
+                                        <span className={`headline-small font-bold ${e.pagato ? 'text-[var(--md-sys-color-primary)] opacity-50 decoration-slate-400' : 'text-[var(--md-sys-color-on-surface)]'}`}>
+                                            {e.costo.toFixed(2)}
+                                        </span>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => togglePaid(e.id, e.pagato)}
+                                                className={`w-10 h-10 rounded-[12px] flex items-center justify-center transition-all duration-200 active:scale-90 ${e.pagato
+                                                    ? 'bg-[#C4EED0] text-[#0A5C1F] shadow-sm hover:shadow-md'
+                                                    : 'bg-[var(--md-sys-color-surface-container-highest)] text-[var(--md-sys-color-on-surface-variant)] hover:bg-[var(--md-sys-color-surface-variant)]'}`}
+                                            >
+                                                {e.pagato ? <Check size={20} strokeWidth={3} /> : <div className="w-5 h-5 border-2 border-current rounded-full"></div>}
+                                            </button>
+                                            <button
+                                                onClick={() => { setNewItemExpense(e); setEditingId(e.id); setActiveModal('expenses'); }}
+                                                className="w-10 h-10 rounded-[12px] bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] flex items-center justify-center transition-all duration-200 active:scale-90 hover:shadow-md"
+                                            >
+                                                <Edit size={18} />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteExpense(e.id)}
+                                                className="w-10 h-10 rounded-[12px] bg-[#FFDAD6] text-[#410002] flex items-center justify-center transition-all duration-200 active:scale-90 hover:shadow-md hover:bg-[#FFB4AB]"
+                                            >
+                                                <Trash size={18} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
-                        <Button variant="green" onClick={() => { setNewItemExpense(prev => ({ ...prev, valuta: tripDetails.currencySymbol || "£" })); setActiveModal('expenses'); }} icon={Plus}>Aggiungi Spesa</Button>
-                        {filteredExpenses.map(e => (
-                            <Card key={e.id} className="border-l-4 border-l-transparent hover:border-l-indigo-500">
-                                <div className="flex justify-between items-start">
-                                    <div className="flex-1">
-                                        <h3 className="font-bold text-gray-800 flex justify-between">
-                                            {e.item}
-                                            <div className="flex gap-1">
-                                                <button onClick={() => { setNewItemExpense(e); setEditingId(e.id); setActiveModal('expenses'); }} className="text-gray-300 hover:text-blue-500"><Edit size={14} /></button>
-                                                <button onClick={() => handleDeleteExpense(e.id)} className="text-gray-300 hover:text-red-500"><Trash size={14} /></button>
-                                            </div>
-                                        </h3>
-                                        <p className="text-xs text-gray-500">{e.note}</p>
-                                        <div className="flex gap-2 mt-2">
-                                            <button onClick={() => toggleBooked(e.id, e.prenotato)} className={`text-[10px] px-2 py-1 rounded border ${e.prenotato ? 'bg-purple-100 text-purple-700' : 'text-gray-400'}`}>{e.prenotato ? 'Prenotato' : 'Da Prenotare'}</button>
-                                            <button onClick={() => togglePaid(e.id, e.pagato)} className={`text-[10px] px-2 py-1 rounded border ${e.pagato ? 'bg-green-100 text-green-700' : 'text-gray-400'}`}>{e.pagato ? 'Pagato' : 'Da Pagare'}</button>
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <span className="font-mono font-bold text-lg">{e.valuta} {e.costo.toFixed(2)}</span>
-                                        <div className="text-[10px] bg-gray-100 mt-1 rounded px-1">{e.chi}</div>
-                                    </div>
-                                </div>
-                            </Card>
-                        ))}
-                    </div>
-                )}
-                {activeTab === "itinerary" && (
-                    <div className="space-y-6">
-                        <div className="flex justify-between items-center bg-white p-3 rounded-xl shadow-sm border border-gray-100"><h2 className="font-bold text-gray-800 flex gap-2"><Calendar size={20} className="text-red-500" /> Il tuo Viaggio</h2><button onClick={() => setActiveModal('day')} className="bg-black text-white px-3 py-1.5 rounded-lg text-xs font-bold">+ Giornata</button></div>
-                        {days.map(day => {
-                            const dateObj = new Date(day.data);
-                            const dayName = dateObj.toLocaleDateString('it-IT', { weekday: 'long' });
-                            const dayNumber = dateObj.getDate();
-                            const monthYear = dateObj.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+                    )}
+                    {activeTab === "itinerary" && (
+                        <div className="space-y-6">
+                            <div className="flex justify-between items-center bg-[var(--md-sys-color-surface-container-low)] p-3 rounded-xl shadow-sm border border-[var(--md-sys-color-outline-variant)]"><h2 className="font-bold text-[var(--md-sys-color-on-surface)] flex gap-2"><Calendar size={20} className="text-[var(--md-sys-color-primary)]" /> Il tuo Viaggio</h2><button onClick={() => setActiveModal('day')} className="bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] px-3 py-1.5 rounded-full text-xs font-bold">+ Giornata</button></div>
+                            {days.map(day => {
+                                const dateObj = new Date(day.data);
+                                const dayName = dateObj.toLocaleDateString('it-IT', { weekday: 'long' });
+                                const dayNumber = dateObj.getDate();
+                                const monthYear = dateObj.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
 
-                            return (
-                                <div key={day.id} className="relative pl-6 border-l-2 border-gray-200 pb-8 last:border-l-transparent">
-                                    <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full border-4 border-white bg-red-500 shadow-sm z-10"></div>
+                                return (
+                                    <div key={day.id} className="relative pl-6 border-l-2 border-[var(--md-sys-color-outline-variant)] pb-8 last:border-l-transparent">
+                                        <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full border-4 border-[var(--md-sys-color-surface)] bg-[var(--md-sys-color-primary)] shadow-sm z-10"></div>
 
-                                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-2">
-                                        <div className="p-4 flex justify-between items-start">
-                                            <div>
-                                                <div className="flex items-baseline gap-2">
-                                                    <h3 className="font-bold text-gray-800 text-xl capitalize">{dayName}</h3>
-                                                    <span className="text-3xl font-black text-red-500">{dayNumber}</span>
+                                        <div className="bg-[var(--md-sys-color-surface-container-low)] rounded-[24px] shadow-sm overflow-hidden mb-2">
+                                            <div className="p-5 flex justify-between items-start">
+                                                <div>
+                                                    <div className="flex items-baseline gap-3">
+                                                        <h3 className="headline-small font-bold text-[var(--md-sys-color-on-surface)] capitalize">{dayName}</h3>
+                                                        <span className="display-small font-bold text-[var(--md-sys-color-primary)]">{dayNumber}</span>
+                                                    </div>
+                                                    <div className="label-medium font-bold text-[var(--md-sys-color-on-surface-variant)] uppercase tracking-wider">{monthYear}</div>
                                                 </div>
-                                                <div className="text-xs font-bold text-gray-400 uppercase tracking-wider">{monthYear}</div>
-                                            </div>
-                                            <div className="flex gap-2">
-                                                <button
-                                                    onClick={() => { setEditingId(day.id); setActiveModal('event'); }}
-                                                    className="bg-blue-50 text-blue-600 px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 hover:bg-blue-100 transition-colors"
-                                                >
-                                                    <Plus size={14} /> Evento
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDeleteDay(day.id)}
-                                                    className="text-gray-300 hover:text-red-500 p-1 rounded-lg transition-colors"
-                                                >
-                                                    <Trash size={16} />
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <div className="border-t border-gray-50">
-                                            {(!day.events || day.events.length === 0) ? (
-                                                <div className="p-8 text-center text-gray-400 italic text-sm">
-                                                    Nessun evento pianificato per oggi
+                                                <div className="flex flex-col gap-2 items-end">
+                                                    <button
+                                                        onClick={() => handleDeleteDay(day.id)}
+                                                        className="w-10 h-10 rounded-[12px] bg-[#FFDAD6] text-[#410002] flex items-center justify-center transition-all duration-200 active:scale-90 hover:shadow-md hover:bg-[#FFB4AB]"
+                                                    >
+                                                        <Trash size={18} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => { setEditingId(day.id); setActiveModal('event'); }}
+                                                        className="h-10 px-4 rounded-[12px] bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] text-xs font-bold flex items-center gap-1.5 transition-all duration-200 active:scale-95 hover:shadow-md"
+                                                    >
+                                                        <Plus size={16} /> Evento
+                                                    </button>
                                                 </div>
-                                            ) : (
-                                                <div className="divide-y divide-gray-50">
-                                                    {day.events.map(ev => (
-                                                        <div key={ev.id} className="p-3 flex gap-3 hover:bg-gray-50 cursor-pointer group">
-                                                            <div className="font-bold text-gray-700 text-sm min-w-[45px] pt-1">{ev.time}</div>
-                                                            <div className="flex-1">
-                                                                <h4 className="font-bold text-sm flex justify-between items-start">
-                                                                    <span className={ev.type === 'custom' ? 'text-gray-900' : 'text-blue-900'}>
-                                                                        {ev.type === 'custom' ? ev.customTitle : (itinerary.find(i => i.id === ev.attractionId)?.nome || 'Attrazione')}
-                                                                    </span>
-                                                                    <button onClick={(e) => { e.stopPropagation(); handleDeleteEvent(day.id, ev.id); }} className="text-gray-300 opacity-0 group-hover:opacity-100 hover:text-red-500 transition-all"><X size={14} /></button>
-                                                                </h4>
-                                                                {ev.notes && <p className="text-xs text-amber-600 bg-amber-50 inline-block px-2 py-0.5 rounded mt-1">{ev.notes}</p>}
+                                            </div>
+
+                                            <div className="border-t border-[var(--md-sys-color-outline-variant)]">
+                                                {(!day.events || day.events.length === 0) ? (
+                                                    <div className="p-8 text-center text-[var(--md-sys-color-on-surface-variant)] italic text-sm">
+                                                        Nessun evento pianificato per oggi
+                                                    </div>
+                                                ) : (
+                                                    <div className="divide-y divide-[var(--md-sys-color-outline-variant)]">
+                                                        {day.events.map(ev => (
+                                                            <div key={ev.id} className="p-4 flex gap-4 hover:bg-[var(--md-sys-color-surface-container)] cursor-pointer group transition-colors">
+                                                                <div className="title-medium font-bold text-[var(--md-sys-color-primary)] min-w-[50px] pt-0.5">{ev.time}</div>
+                                                                <div className="flex-1">
+                                                                    <h4 className="title-medium font-bold flex justify-between items-start">
+                                                                        <span className={ev.type === 'custom' ? 'text-[var(--md-sys-color-on-surface)]' : 'text-[var(--md-sys-color-primary)]'}>
+                                                                            {ev.type === 'custom' ? ev.customTitle : (itinerary.find(i => i.id === ev.attractionId)?.nome || 'Attrazione')}
+                                                                        </span>
+                                                                        <button onClick={(e) => { e.stopPropagation(); handleDeleteEvent(day.id, ev.id); }} className="text-[var(--md-sys-color-error)] opacity-0 group-hover:opacity-100 transition-all"><X size={16} /></button>
+                                                                    </h4>
+                                                                    {ev.notes && <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] bg-[var(--md-sys-color-surface-variant)]/10 inline-block px-2 py-0.5 rounded-lg mt-1 font-medium">{ev.notes}</p>}
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
-                {activeTab === "backpack" && <BackpackTab tripId={tripId} />}
-                {activeTab === "documents" && <DocumentsTab tripId={tripId} tripDetails={tripDetails} />}
-            </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                    {activeTab === "backpack" && <BackpackTab tripId={tripId} />}
+                    {activeTab === "documents" && <DocumentsTab tripId={tripId} tripDetails={tripDetails} />}
+                </div>
+
+            </div >
 
             {/* Modals */}
-            <Modal isOpen={activeModal === 'itinerary'} onClose={() => { setActiveModal(null); setEditingId(null); }} title={editingId ? "Modifica Attrazione" : "Nuova Attrazione"}>
+            <Modal isOpen={activeModal === 'itinerary'} onClose={() => { setActiveModal(null); setEditingId(null); }} title={editingId ? "Modifica Attrazione" : "Nuova Attrazione"} >
                 <InputGroup label="Nome">
                     <input
                         type="text"
                         placeholder="Es. London Eye"
-                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-black transition-all"
+                        className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50"
                         value={newItemItinerary.nome}
                         onChange={e => setNewItemItinerary({ ...newItemItinerary, nome: e.target.value })}
                     />
                 </InputGroup>
                 <InputGroup label="Categoria">
                     <select
-                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-black transition-all appearance-none"
+                        className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all appearance-none text-[var(--md-sys-color-on-surface)]"
                         value={newItemItinerary.categoria}
                         onChange={e => setNewItemItinerary({ ...newItemItinerary, categoria: e.target.value })}
                     >
@@ -453,7 +637,7 @@ const TripDashboard = () => {
                     <input
                         type="text"
                         placeholder="Es. Westminster"
-                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-black transition-all"
+                        className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50"
                         value={newItemItinerary.quartiere}
                         onChange={e => setNewItemItinerary({ ...newItemItinerary, quartiere: e.target.value })}
                     />
@@ -463,7 +647,7 @@ const TripDashboard = () => {
                         <input
                             type="text"
                             placeholder="Es. 2 ore"
-                            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-black transition-all"
+                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50"
                             value={newItemItinerary.durata}
                             onChange={e => setNewItemItinerary({ ...newItemItinerary, durata: e.target.value })}
                         />
@@ -472,7 +656,7 @@ const TripDashboard = () => {
                         <input
                             type="text"
                             placeholder="10:00 - 18:00"
-                            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-black transition-all"
+                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50"
                             value={newItemItinerary.orari}
                             onChange={e => setNewItemItinerary({ ...newItemItinerary, orari: e.target.value })}
                         />
@@ -482,7 +666,7 @@ const TripDashboard = () => {
                     <input
                         type="text"
                         placeholder="Es. Chiuso lunedì"
-                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-black transition-all"
+                        className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50"
                         value={newItemItinerary.eccezioni}
                         onChange={e => setNewItemItinerary({ ...newItemItinerary, eccezioni: e.target.value })}
                     />
@@ -491,7 +675,7 @@ const TripDashboard = () => {
                     <input
                         type="text"
                         placeholder="https://..."
-                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-black transition-all"
+                        className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50"
                         value={newItemItinerary.img}
                         onChange={e => setNewItemItinerary({ ...newItemItinerary, img: e.target.value })}
                     />
@@ -500,19 +684,19 @@ const TripDashboard = () => {
                     <input
                         type="text"
                         placeholder="https://..."
-                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-black transition-all"
+                        className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50"
                         value={newItemItinerary.mapEmbed}
                         onChange={e => setNewItemItinerary({ ...newItemItinerary, mapEmbed: e.target.value })}
                     />
                     <p className="text-[10px] text-gray-400 mt-1">Vai su Google Maps &gt; Condividi &gt; Incorpora una mappa &gt; Copia HTML (solo il link 'src')</p>
                 </InputGroup>
                 <Button onClick={handleAddItinerary} className="mt-4">{editingId ? "Salva Modifiche" : "Aggiungi"}</Button>
-            </Modal>
+            </Modal >
             <Modal isOpen={activeModal === 'transport'} onClose={() => setActiveModal(null)} title="Spostamento">
-                <InputGroup label="Mezzo"><input type="text" className="w-full border-2 rounded-xl p-3" value={newItemTransport.dettaglio} onChange={e => setNewItemTransport({ ...newItemTransport, dettaglio: e.target.value })} /></InputGroup>
-                <div className="grid grid-cols-2 gap-3"><InputGroup label="Partenza"><input type="text" className="w-full border-2 rounded-xl p-3" value={newItemTransport.partenza} onChange={e => setNewItemTransport({ ...newItemTransport, partenza: e.target.value })} /></InputGroup><InputGroup label="Arrivo"><input type="text" className="w-full border-2 rounded-xl p-3" value={newItemTransport.arrivo} onChange={e => setNewItemTransport({ ...newItemTransport, arrivo: e.target.value })} /></InputGroup></div>
-                <div className="grid grid-cols-2 gap-3"><InputGroup label="Data"><input type="text" className="w-full border-2 rounded-xl p-3" value={newItemTransport.data} onChange={e => setNewItemTransport({ ...newItemTransport, data: e.target.value })} /></InputGroup><InputGroup label="Ora"><input type="text" className="w-full border-2 rounded-xl p-3" value={newItemTransport.ora} onChange={e => setNewItemTransport({ ...newItemTransport, ora: e.target.value })} /></InputGroup></div>
-                <InputGroup label="Costo"><input type="text" className="w-full border-2 rounded-xl p-3" value={newItemTransport.costo} onChange={e => setNewItemTransport({ ...newItemTransport, costo: e.target.value })} /></InputGroup>
+                <InputGroup label="Mezzo"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50" value={newItemTransport.dettaglio} onChange={e => setNewItemTransport({ ...newItemTransport, dettaglio: e.target.value })} /></InputGroup>
+                <div className="grid grid-cols-2 gap-3"><InputGroup label="Partenza"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50" value={newItemTransport.partenza} onChange={e => setNewItemTransport({ ...newItemTransport, partenza: e.target.value })} /></InputGroup><InputGroup label="Arrivo"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50" value={newItemTransport.arrivo} onChange={e => setNewItemTransport({ ...newItemTransport, arrivo: e.target.value })} /></InputGroup></div>
+                <div className="grid grid-cols-2 gap-3"><InputGroup label="Data"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50" value={newItemTransport.data} onChange={e => setNewItemTransport({ ...newItemTransport, data: e.target.value })} /></InputGroup><InputGroup label="Ora"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50" value={newItemTransport.ora} onChange={e => setNewItemTransport({ ...newItemTransport, ora: e.target.value })} /></InputGroup></div>
+                <InputGroup label="Costo"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50" value={newItemTransport.costo} onChange={e => setNewItemTransport({ ...newItemTransport, costo: e.target.value })} /></InputGroup>
                 <Button onClick={handleAddTransport} className="mt-4">Salva</Button>
             </Modal>
             <Modal isOpen={activeModal === 'expenses'} onClose={() => { setActiveModal(null); setEditingId(null); }} title={editingId ? "Modifica Spesa" : "Nuova Spesa"}>
@@ -520,7 +704,7 @@ const TripDashboard = () => {
                     <input
                         type="text"
                         placeholder="Es. Cena"
-                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-black transition-all"
+                        className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50"
                         value={newItemExpense.item}
                         onChange={e => setNewItemExpense({ ...newItemExpense, item: e.target.value })}
                     />
@@ -530,14 +714,14 @@ const TripDashboard = () => {
                         <input
                             type="number"
                             placeholder="0.00"
-                            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-black transition-all font-bold"
+                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all font-bold text-[var(--md-sys-color-on-surface)] placeholder:opacity-50"
                             value={newItemExpense.costo}
                             onChange={e => setNewItemExpense({ ...newItemExpense, costo: e.target.value })}
                         />
                     </InputGroup>
                     <InputGroup label="Valuta">
                         <select
-                            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-black transition-all appearance-none text-sm font-medium"
+                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all appearance-none text-sm font-medium text-[var(--md-sys-color-on-surface)]"
                             value={newItemExpense.valuta}
                             onChange={e => setNewItemExpense({ ...newItemExpense, valuta: e.target.value })}
                         >
@@ -548,26 +732,26 @@ const TripDashboard = () => {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 mb-4">
-                    <label className={`flex items-center gap-3 p-3 border rounded-xl cursor-pointer transition-all select-none ${newItemExpense.prenotato ? 'bg-purple-50 border-purple-200' : 'bg-white border-gray-200 hover:bg-gray-50'}`}>
-                        <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${newItemExpense.prenotato ? 'bg-purple-500 border-purple-500' : 'bg-white border-gray-300'}`}>
-                            {newItemExpense.prenotato && <Check size={12} className="text-white" />}
+                    <label className={`flex items-center gap-3 p-4 border-0 rounded-xl cursor-pointer transition-all select-none ${newItemExpense.prenotato ? 'bg-[var(--md-sys-color-secondary-container)]' : 'bg-[var(--md-sys-color-surface-container-highest)]'}`}>
+                        <div className={`w-5 h-5 rounded border-0 flex items-center justify-center transition-colors ${newItemExpense.prenotato ? 'bg-[var(--md-sys-color-on-secondary-container)]' : 'bg-[var(--md-sys-color-surface-variant)]'}`}>
+                            {newItemExpense.prenotato && <Check size={12} className="text-[var(--md-sys-color-secondary-container)]" />}
                         </div>
-                        <span className={`text-xs font-bold ${newItemExpense.prenotato ? 'text-purple-700' : 'text-gray-500'}`}>Già Prenotato</span>
+                        <span className={`text-sm font-bold ${newItemExpense.prenotato ? 'text-[var(--md-sys-color-on-secondary-container)]' : 'text-[var(--md-sys-color-on-surface-variant)]'}`}>Già Prenotato</span>
                         <input type="checkbox" className="hidden" checked={newItemExpense.prenotato} onChange={() => setNewItemExpense({ ...newItemExpense, prenotato: !newItemExpense.prenotato })} />
                     </label>
 
-                    <label className={`flex items-center gap-3 p-3 border rounded-xl cursor-pointer transition-all select-none ${newItemExpense.pagato ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200 hover:bg-gray-50'}`}>
-                        <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${newItemExpense.pagato ? 'bg-green-500 border-green-500' : 'bg-white border-gray-300'}`}>
-                            {newItemExpense.pagato && <Check size={12} className="text-white" />}
+                    <label className={`flex items-center gap-3 p-4 border-0 rounded-xl cursor-pointer transition-all select-none ${newItemExpense.pagato ? 'bg-[var(--md-sys-color-tertiary-container)]' : 'bg-[var(--md-sys-color-surface-container-highest)]'}`}>
+                        <div className={`w-5 h-5 rounded border-0 flex items-center justify-center transition-colors ${newItemExpense.pagato ? 'bg-[var(--md-sys-color-on-tertiary-container)]' : 'bg-[var(--md-sys-color-surface-variant)]'}`}>
+                            {newItemExpense.pagato && <Check size={12} className="text-[var(--md-sys-color-tertiary-container)]" />}
                         </div>
-                        <span className={`text-xs font-bold ${newItemExpense.pagato ? 'text-green-700' : 'text-gray-500'}`}>Già Pagato</span>
+                        <span className={`text-sm font-bold ${newItemExpense.pagato ? 'text-[var(--md-sys-color-on-tertiary-container)]' : 'text-[var(--md-sys-color-on-surface-variant)]'}`}>Già Pagato</span>
                         <input type="checkbox" className="hidden" checked={newItemExpense.pagato} onChange={() => setNewItemExpense({ ...newItemExpense, pagato: !newItemExpense.pagato })} />
                     </label>
                 </div>
 
                 <InputGroup label="Chi Ha Pagato">
                     <select
-                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-black transition-all appearance-none"
+                        className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all appearance-none text-[var(--md-sys-color-on-surface)]"
                         value={newItemExpense.chi}
                         onChange={e => setNewItemExpense({ ...newItemExpense, chi: e.target.value })}
                     >
@@ -581,29 +765,29 @@ const TripDashboard = () => {
                     <input
                         type="text"
                         placeholder="Es. Da dividere"
-                        className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-black transition-all"
+                        className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50"
                         value={newItemExpense.note || ""}
                         onChange={e => setNewItemExpense({ ...newItemExpense, note: e.target.value })}
                     />
                 </InputGroup>
 
-                <Button onClick={handleAddExpense} variant="green" className="mt-4">Salva Spesa</Button>
+                <Button onClick={handleAddExpense} className="mt-4 !bg-[#B3261E] !text-white shadow-md hover:!bg-[#8C1D18]">Salva Spesa</Button>
             </Modal>
             <Modal isOpen={activeModal === 'day'} onClose={() => setActiveModal(null)} title="Nuova Giornata">
-                <InputGroup label="Data"><input type="date" className="w-full border-2 rounded-xl p-3" value={newItemDay.data} onChange={e => setNewItemDay({ ...newItemDay, data: e.target.value })} /></InputGroup>
+                <InputGroup label="Data"><input type="date" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50" value={newItemDay.data} onChange={e => setNewItemDay({ ...newItemDay, data: e.target.value })} /></InputGroup>
                 <Button onClick={handleAddDay} className="mt-4">Salva</Button>
             </Modal>
             <Modal isOpen={activeModal === 'event'} onClose={() => { setActiveModal(null); setEditingId(null); }} title="Aggiungi Evento">
-                <div className="flex bg-gray-100 p-1 rounded-xl mb-4">
+                <div className="flex p-1 bg-[var(--md-sys-color-surface-container-high)] rounded-full border border-[var(--md-sys-color-outline-variant)] mb-4 w-full">
                     <button
                         onClick={() => setNewItemEvent({ ...newItemEvent, type: 'attraction' })}
-                        className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${newItemEvent.type !== 'custom' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                        className={`flex-1 py-2 rounded-full text-sm font-bold transition-all ${newItemEvent.type !== 'custom' ? 'bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] shadow-sm' : 'text-[var(--md-sys-color-on-surface-variant)] hover:bg-[var(--md-sys-color-surface-container-highest)]'}`}
                     >
                         Attrazione
                     </button>
                     <button
                         onClick={() => setNewItemEvent({ ...newItemEvent, type: 'custom' })}
-                        className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${newItemEvent.type === 'custom' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                        className={`flex-1 py-2 rounded-full text-sm font-bold transition-all ${newItemEvent.type === 'custom' ? 'bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] shadow-sm' : 'text-[var(--md-sys-color-on-surface-variant)] hover:bg-[var(--md-sys-color-surface-container-highest)]'}`}
                     >
                         Altro / Note
                     </button>
@@ -615,7 +799,7 @@ const TripDashboard = () => {
                             <input
                                 type="text"
                                 placeholder="Es. Pranzo, Shopping, Relax..."
-                                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-black transition-all"
+                                className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50"
                                 value={newItemEvent.customTitle}
                                 onChange={e => setNewItemEvent({ ...newItemEvent, customTitle: e.target.value })}
                             />
@@ -624,11 +808,11 @@ const TripDashboard = () => {
                 ) : (
                     <div className="space-y-3">
                         <div className="relative">
-                            <Search className="absolute left-3 top-3.5 text-gray-400" size={18} />
+                            <Search className="absolute left-3 top-3.5 text-[var(--md-sys-color-on-surface-variant)]" size={18} />
                             <input
                                 type="text"
                                 placeholder="Cerca attrazione..."
-                                className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl outline-none focus:border-blue-500 transition-all text-sm"
+                                className="w-full pl-10 pr-4 py-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-sm text-[var(--md-sys-color-on-surface)] placeholder:opacity-50"
                                 value={eventSearch}
                                 onChange={(e) => setEventSearch(e.target.value)}
                             />
@@ -643,27 +827,27 @@ const TripDashboard = () => {
                                         <div
                                             key={item.id}
                                             onClick={() => setNewItemEvent({ ...newItemEvent, attractionId: item.id })}
-                                            className={`flex items-center gap-3 p-2 rounded-xl border cursor-pointer transition-all group ${isSelected ? 'border-blue-500 bg-blue-50/30 ring-1 ring-blue-500' : 'border-gray-100 bg-white hover:border-gray-300'
+                                            className={`flex items-center gap-3 p-3 rounded-2xl border-0 cursor-pointer transition-all group ${isSelected ? 'bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] ring-2 ring-[var(--md-sys-color-primary)]' : 'bg-[var(--md-sys-color-surface-container-low)] text-[var(--md-sys-color-on-surface)] hover:bg-[var(--md-sys-color-surface-container)]'
                                                 }`}
                                         >
-                                            <div className="w-12 h-12 rounded-lg bg-gray-200 overflow-hidden shrink-0">
+                                            <div className="w-12 h-12 rounded-xl bg-[var(--md-sys-color-surface-container-highest)] overflow-hidden shrink-0">
                                                 {item.img ? (
                                                     <img src={item.img} alt={item.nome} className="w-full h-full object-cover" />
                                                 ) : (
-                                                    <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                                    <div className="w-full h-full flex items-center justify-center text-[var(--md-sys-color-on-surface-variant)]">
                                                         <MapPin size={20} />
                                                     </div>
                                                 )}
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <h4 className={`font-bold text-sm truncate ${isSelected ? 'text-blue-700' : 'text-gray-800'}`}>{item.nome}</h4>
+                                                <h4 className={`font-bold text-sm truncate ${isSelected ? 'text-[var(--md-sys-color-on-secondary-container)]' : 'text-[var(--md-sys-color-on-surface)]'}`}>{item.nome}</h4>
                                                 <div className="flex items-center gap-2 mt-0.5">
                                                     <Badge type={item.categoria}>{item.categoria}</Badge>
-                                                    <span className="text-xs text-gray-400">{item.durata}</span>
+                                                    <span className={`text-xs ${isSelected ? 'text-[var(--md-sys-color-on-secondary-container)] opacity-80' : 'text-[var(--md-sys-color-on-surface-variant)]'}`}>{item.durata}</span>
                                                 </div>
                                             </div>
-                                            <button className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${isSelected ? 'bg-blue-600 text-white' : 'bg-gray-50 text-blue-600 group-hover:bg-blue-100'}`}>
-                                                {isSelected ? <Check size={16} /> : <Plus size={18} />}
+                                            <button className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${isSelected ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)]' : 'bg-[var(--md-sys-color-surface-container-highest)] text-[var(--md-sys-color-primary)] group-hover:bg-[var(--md-sys-color-primary-container)]'}`}>
+                                                {isSelected ? <Check size={20} /> : <Plus size={20} />}
                                             </button>
                                         </div>
                                     );
@@ -677,16 +861,16 @@ const TripDashboard = () => {
                     </div>
                 )}
 
-                <div className="mt-4 pt-4 border-t border-gray-100 space-y-4">
+                <div className="mt-4 pt-4 border-t border-[var(--md-sys-color-outline-variant)] space-y-4">
                     <InputGroup label="Orario Inizio">
                         <div className="relative">
                             <input
                                 type="time"
-                                className="w-full p-3 pl-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-black transition-all font-bold text-gray-700"
+                                className="w-full p-4 pl-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all font-bold text-[var(--md-sys-color-on-surface)] placeholder:opacity-50"
                                 value={newItemEvent.time}
                                 onChange={e => setNewItemEvent({ ...newItemEvent, time: e.target.value })}
                             />
-                            <Clock className="absolute right-4 top-3.5 text-gray-400 pointer-events-none" size={18} />
+                            <Clock className="absolute right-4 top-3.5 text-[var(--md-sys-color-on-surface-variant)] pointer-events-none" size={18} />
                         </div>
                     </InputGroup>
 
@@ -694,7 +878,7 @@ const TripDashboard = () => {
                         <input
                             type="text"
                             placeholder="Es. Ingresso prenotato, dettagli..."
-                            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-black transition-all text-sm"
+                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-sm text-[var(--md-sys-color-on-surface)] placeholder:opacity-50"
                             value={newItemEvent.notes}
                             onChange={e => setNewItemEvent({ ...newItemEvent, notes: e.target.value })}
                         />
@@ -706,8 +890,8 @@ const TripDashboard = () => {
                 </Button>
             </Modal>
             <Modal isOpen={activeModal === 'tripDetails'} onClose={() => setActiveModal(null)} title="Dettagli Viaggio">
-                <InputGroup label="Titolo"><input type="text" className="w-full border-2 rounded-xl p-3" value={newItemTripDetails.title} onChange={e => setNewItemTripDetails({ ...newItemTripDetails, title: e.target.value })} /></InputGroup>
-                <div className="grid grid-cols-2 gap-3"><InputGroup label="Date"><input type="text" className="w-full border-2 rounded-xl p-3" value={newItemTripDetails.dates} onChange={e => setNewItemTripDetails({ ...newItemTripDetails, dates: e.target.value })} /></InputGroup><InputGroup label="Flag"><input type="text" className="w-full border-2 rounded-xl p-3" value={newItemTripDetails.flag} onChange={e => setNewItemTripDetails({ ...newItemTripDetails, flag: e.target.value })} /></InputGroup></div>
+                <InputGroup label="Titolo"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50" value={newItemTripDetails.title} onChange={e => setNewItemTripDetails({ ...newItemTripDetails, title: e.target.value })} /></InputGroup>
+                <div className="grid grid-cols-2 gap-3"><InputGroup label="Date"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50" value={newItemTripDetails.dates} onChange={e => setNewItemTripDetails({ ...newItemTripDetails, dates: e.target.value })} /></InputGroup><InputGroup label="Flag"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50" value={newItemTripDetails.flag} onChange={e => setNewItemTripDetails({ ...newItemTripDetails, flag: e.target.value })} /></InputGroup></div>
                 <div className="flex flex-wrap gap-2 mt-2">{colors.map(c => <button key={c.hex} onClick={() => setNewItemTripDetails({ ...newItemTripDetails, color: c.hex })} className="w-8 h-8 rounded-full border-2" style={{ backgroundColor: c.hex, borderColor: newItemTripDetails.color === c.hex ? 'black' : 'transparent' }}></button>)}</div>
                 <Button onClick={handleUpdateTripDetails} className="mt-4">Salva</Button>
             </Modal>
@@ -722,34 +906,94 @@ const TripDashboard = () => {
                 {viewingItem?.mapEmbed && <iframe src={viewingItem.mapEmbed} className="w-full h-48 border-0 rounded-lg mt-4" />}
             </Modal>
 
-            <div className="mobile-footer">
-                {["itinerary", "attractions", "expenses", "backpack", "documents"].map(t => {
-                    const labels = {
-                        itinerary: "Giornate",
-                        attractions: "Luoghi",
-                        expenses: "Spese",
-                        backpack: "Zaino",
-                        documents: "Documenti"
-                    };
-                    const isActive = activeTab === t;
-                    return (
-                        <button
-                            key={t}
-                            onClick={() => setActiveTab(t)}
-                            className={`mobile-footer-btn ${isActive ? 'active' : ''}`}
-                            style={{ color: isActive ? tripDetails.color : undefined }}
-                        >
-                            {t === 'itinerary' && <Calendar size={20} />}
-                            {t === 'attractions' && <MapPin size={20} />}
-                            {t === 'expenses' && <PoundSterling size={20} />}
-                            {t === 'backpack' && <Backpack size={20} />}
-                            {t === 'documents' && <FileText size={20} />}
-                            <span className="mobile-footer-label">{labels[t]}</span>
-                        </button>
-                    );
-                })}
-            </div>
-        </div>
+            {/* M3 Expressive Navigation */}
+            {(() => {
+                const tabs = ["itinerary", "attractions", "expenses", "backpack", "documents"];
+                const labels = {
+                    itinerary: "Giornate",
+                    attractions: "Luoghi",
+                    expenses: "Spese",
+                    backpack: "Zaino",
+                    documents: "Doc"
+                };
+                const activeIndex = tabs.indexOf(activeTab);
+
+                // Calculate floating FAB position (each tab is 20% of width, FAB is 48px so offset by 24px)
+                const fabLeft = `calc(${activeIndex * 20}% + 10% - 24px)`;
+
+                // SVG path parameters
+                const barHeight = 64;
+                const notchRadius = 26; // Half of FAB 48px + some padding
+                const notchDepth = 24; // How deep the notch goes
+
+                // Calculate notch center X (viewBox is 400 units wide)
+                const notchCenterX = (activeIndex * 20 + 10) * 4;
+
+                return (
+                    <nav className="expressive-nav">
+                        <div className="expressive-nav-inner">
+                            {/* SVG Background with curved notch */}
+                            <div className="expressive-nav-bg">
+                                <svg viewBox="0 0 400 64" preserveAspectRatio="none">
+                                    <path
+                                        className="nav-bg-path"
+                                        d={`
+                                            M 0 0
+                                            L ${notchCenterX - notchRadius - 8} 0
+                                            C ${notchCenterX - notchRadius} 0
+                                              ${notchCenterX - notchRadius} ${notchDepth}
+                                              ${notchCenterX} ${notchDepth}
+                                            C ${notchCenterX + notchRadius} ${notchDepth}
+                                              ${notchCenterX + notchRadius} 0
+                                              ${notchCenterX + notchRadius + 8} 0
+                                            L 400 0
+                                            L 400 ${barHeight}
+                                            L 0 ${barHeight}
+                                            Z
+                                        `}
+                                    />
+                                </svg>
+                            </div>
+
+                            {/* Floating Active Button */}
+                            <div
+                                className="floating-fab"
+                                style={{ left: fabLeft }}
+                            >
+                                {activeTab === 'itinerary' && <Calendar size={20} />}
+                                {activeTab === 'attractions' && <MapPin size={20} />}
+                                {activeTab === 'expenses' && <PoundSterling size={20} />}
+                                {activeTab === 'backpack' && <Backpack size={20} />}
+                                {activeTab === 'documents' && <FileText size={20} />}
+                            </div>
+
+                            {/* Navigation Items */}
+                            <div className="nav-items-container">
+                                {tabs.map((t, index) => {
+                                    const isActive = activeTab === t;
+                                    return (
+                                        <button
+                                            key={t}
+                                            onClick={() => setActiveTab(t)}
+                                            className={`expressive-nav-item ${isActive ? 'active' : ''}`}
+                                        >
+                                            <div className="nav-icon">
+                                                {t === 'itinerary' && <Calendar size={22} />}
+                                                {t === 'attractions' && <MapPin size={22} />}
+                                                {t === 'expenses' && <PoundSterling size={22} />}
+                                                {t === 'backpack' && <Backpack size={22} />}
+                                                {t === 'documents' && <FileText size={22} />}
+                                            </div>
+                                            <span className="nav-label">{labels[t]}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </nav>
+                );
+            })()}
+        </div >
     );
 };
 

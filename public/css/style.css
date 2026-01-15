@@ -1,23 +1,691 @@
 /* Global Styles */
-body {
+:root {
+    /* === Material 3 Expressive Color System === */
+    /* Seed Color Reference */
+    --md-sys-color-seed: #DC2626;
+
+    /* Primary Colors */
+    --md-sys-color-primary: #904A43;
+    --md-sys-color-on-primary: #FFFFFF;
+    --md-sys-color-primary-container: #FFDAD6;
+    --md-sys-color-on-primary-container: #73332E;
+
+    /* Secondary Colors */
+    --md-sys-color-secondary: #775653;
+    --md-sys-color-on-secondary: #FFFFFF;
+    --md-sys-color-secondary-container: #FFDAD6;
+    --md-sys-color-on-secondary-container: #5D3F3C;
+
+    /* Tertiary Colors */
+    --md-sys-color-tertiary: #715B2E;
+    --md-sys-color-on-tertiary: #FFFFFF;
+    --md-sys-color-tertiary-container: #FDDFA6;
+    --md-sys-color-on-tertiary-container: #584419;
+
+    /* Error Colors */
+    --md-sys-color-error: #BA1A1A;
+    --md-sys-color-on-error: #FFFFFF;
+    --md-sys-color-error-container: #FFDAD6;
+    --md-sys-color-on-error-container: #93000A;
+
+    /* Background & Surface */
+    --md-sys-color-background: #FFF8F7;
+    --md-sys-color-on-background: #231918;
+    --md-sys-color-surface: #FFF8F7;
+    --md-sys-color-on-surface: #231918;
+
+    /* Surface Variants */
+    --md-sys-color-surface-variant: #F5DDDA;
+    --md-sys-color-on-surface-variant: #534341;
+
+    /* Surface Containers (Light) */
+    --md-sys-color-surface-dim: #E8D6D4;
+    --md-sys-color-surface-bright: #FFF8F7;
+    --md-sys-color-surface-container-lowest: #FFFFFF;
+    --md-sys-color-surface-container-low: #FFF0EE;
+    --md-sys-color-surface-container: #FCEAE7;
+    --md-sys-color-surface-container-high: #F6E4E2;
+    --md-sys-color-surface-container-highest: #F1DEDC;
+
+    /* Outline Colors */
+    --md-sys-color-outline: #857371;
+    --md-sys-color-outline-variant: #D8C2BF;
+
+    /* Utility Colors */
+    --md-sys-color-shadow: #000000;
+    --md-sys-color-scrim: #000000;
+
+    /* Inverse Colors */
+    --md-sys-color-inverse-surface: #392E2D;
+    --md-sys-color-inverse-on-surface: #FFEDEA;
+    --md-sys-color-inverse-primary: #FFB4AB;
+
+    /* Fixed Colors (Accent variants) */
+    --md-sys-color-primary-fixed: #FFDAD6;
+    --md-sys-color-on-primary-fixed: #3B0907;
+    --md-sys-color-primary-fixed-dim: #FFB4AB;
+    --md-sys-color-on-primary-fixed-variant: #73332E;
+
+    --md-sys-color-secondary-fixed: #FFDAD6;
+    --md-sys-color-on-secondary-fixed: #2C1513;
+    --md-sys-color-secondary-fixed-dim: #E7BDB8;
+    --md-sys-color-on-secondary-fixed-variant: #5D3F3C;
+
+    --md-sys-color-tertiary-fixed: #FDDFA6;
+    --md-sys-color-on-tertiary-fixed: #261900;
+    --md-sys-color-tertiary-fixed-dim: #E0C38C;
+    --md-sys-color-on-tertiary-fixed-variant: #584419;
+
+    /* === Shapes - Material 3 Expressive === */
+    --shape-corner-none: 0px;
+    --shape-corner-xs: 4px;
+    --shape-corner-s: 8px;
+    --shape-corner-m: 12px;
+    --shape-corner-l: 16px;
+    --shape-corner-xl: 28px;
+    --shape-corner-full: 9999px;
+
+    /* === Material 3 Expressive Motion Tokens === */
+    /* Duration */
+    --motion-duration-short1: 50ms;
+    --motion-duration-short2: 100ms;
+    --motion-duration-short3: 150ms;
+    --motion-duration-short4: 200ms;
+    --motion-duration-medium1: 250ms;
+    --motion-duration-medium2: 300ms;
+    --motion-duration-medium3: 350ms;
+    --motion-duration-medium4: 400ms;
+    --motion-duration-long1: 450ms;
+    --motion-duration-long2: 500ms;
+    --motion-duration-long3: 550ms;
+    --motion-duration-long4: 600ms;
+    --motion-duration-extra-long1: 700ms;
+    --motion-duration-extra-long2: 800ms;
+    --motion-duration-extra-long3: 900ms;
+    --motion-duration-extra-long4: 1000ms;
+
+    /* M3 Expressive Easing Curves */
+    --motion-easing-standard: cubic-bezier(0.2, 0.0, 0, 1.0);
+    --motion-easing-standard-decelerate: cubic-bezier(0, 0, 0, 1);
+    --motion-easing-standard-accelerate: cubic-bezier(0.3, 0, 1, 1);
+    --motion-easing-emphasized: cubic-bezier(0.2, 0.0, 0, 1.0);
+    --motion-easing-emphasized-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1.0);
+    --motion-easing-emphasized-accelerate: cubic-bezier(0.3, 0.0, 0.8, 0.15);
+    --motion-easing-legacy: cubic-bezier(0.4, 0, 0.2, 1);
+    --motion-easing-legacy-decelerate: cubic-bezier(0, 0, 0.2, 1);
+    --motion-easing-legacy-accelerate: cubic-bezier(0.4, 0, 1, 1);
+    --motion-easing-expressive: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    --motion-easing-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --motion-easing-spring: cubic-bezier(0.22, 1, 0.36, 1);
+
+    /* === Typography === */
+    --font-display: 'Outfit', sans-serif;
+    --font-body: 'Plus Jakarta Sans', sans-serif;
+}
+
+* {
+    box-sizing: border-box;
     -webkit-tap-highlight-color: transparent;
+    /* Remove blue highlight on tap */
 }
-.pb-safe {
-    padding-bottom: env(safe-area-inset-bottom);
+
+body {
+    margin: 0;
+    font-family: var(--font-body);
+    background-color: var(--md-sys-color-surface);
+    /* Dynamic Background */
+    color: var(--md-sys-color-on-surface);
+    transition: background-color 0.5s ease, color 0.5s ease;
+    overflow-x: hidden;
+    /* Prevent horizontal scroll */
 }
-.no-scrollbar::-webkit-scrollbar {
+
+/* Material 3 Expressive - Hiding Scrollbars but keeping functionality */
+.scroller {
+    overflow-y: auto;
+    -ms-overflow-style: none;
+    /* IE and Edge */
+    scrollbar-width: none;
+    /* Firefox */
+}
+
+.scroller::-webkit-scrollbar {
     display: none;
 }
-.no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+
+/* Utility for 'Display' Text */
+.display-large {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 57px;
+    line-height: 64px;
+    letter-spacing: -0.25px;
 }
+
+.display-medium {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 45px;
+    line-height: 52px;
+}
+
+.display-small {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 36px;
+    line-height: 44px;
+}
+
+.headline-large {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 32px;
+    line-height: 40px;
+}
+
+.headline-medium {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 28px;
+    line-height: 36px;
+}
+
+.headline-small {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 24px;
+    line-height: 32px;
+}
+
+.title-large {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 22px;
+    line-height: 28px;
+}
+
+.title-medium {
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: 16px;
+    line-height: 24px;
+    letter-spacing: 0.15px;
+}
+
+.title-small {
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: 14px;
+    line-height: 20px;
+    letter-spacing: 0.1px;
+}
+
+.label-large {
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 20px;
+    letter-spacing: 0.1px;
+}
+
+.label-medium {
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 12px;
+    line-height: 16px;
+    letter-spacing: 0.5px;
+}
+
+.label-small {
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 11px;
+    line-height: 16px;
+    letter-spacing: 0.5px;
+}
+
+/* Animation Utils */
+.fade-in {
+    animation: fadeIn 0.4s ease-out forwards;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 /* Keyframes commonly used */
 @keyframes fade-in {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
+
 @keyframes slide-up {
-    from { transform: translateY(20px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* ======================================== */
+/* M3 Expressive Animation Keyframes       */
+/* ======================================== */
+
+/* Modal Animations */
+@keyframes m3-modal-enter {
+    0% {
+        opacity: 0;
+        transform: scale(0.85) translateY(24px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+@keyframes m3-modal-exit {
+    0% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+
+    100% {
+        opacity: 0;
+        transform: scale(0.92) translateY(16px);
+    }
+}
+
+@keyframes m3-overlay-enter {
+    0% {
+        opacity: 0;
+        backdrop-filter: blur(0px);
+    }
+
+    100% {
+        opacity: 1;
+        backdrop-filter: blur(4px);
+    }
+}
+
+@keyframes m3-overlay-exit {
+    0% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0;
+    }
+}
+
+/* Segmented Control / Pill Indicator Animation */
+@keyframes m3-pill-slide {
+    0% {
+        transform: scaleX(0.9);
+    }
+
+    40% {
+        transform: scaleX(1.05);
+    }
+
+    100% {
+        transform: scaleX(1);
+    }
+}
+
+/* Button Press Animation */
+@keyframes m3-button-press {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(0.94);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Card Entrance Animation */
+@keyframes m3-card-enter {
+    0% {
+        opacity: 0;
+        transform: translateY(20px) scale(0.97);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* List Item Stagger Animation */
+@keyframes m3-list-item-enter {
+    0% {
+        opacity: 0;
+        transform: translateX(-12px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* FAB Animation */
+@keyframes m3-fab-enter {
+    0% {
+        opacity: 0;
+        transform: scale(0) rotate(-180deg);
+    }
+
+    60% {
+        transform: scale(1.1) rotate(10deg);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1) rotate(0deg);
+    }
+}
+
+/* Chip/Badge Pop Animation */
+@keyframes m3-chip-pop {
+    0% {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+
+    60% {
+        transform: scale(1.08);
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Ripple Effect */
+@keyframes m3-ripple {
+    0% {
+        transform: scale(0);
+        opacity: 0.5;
+    }
+
+    100% {
+        transform: scale(4);
+        opacity: 0;
+    }
+}
+
+/* Icon Bounce */
+@keyframes m3-icon-bounce {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-4px);
+    }
+}
+
+/* Shake Animation for errors */
+@keyframes m3-shake {
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    20%,
+    60% {
+        transform: translateX(-6px);
+    }
+
+    40%,
+    80% {
+        transform: translateX(6px);
+    }
+}
+
+/* Pulse Animation */
+@keyframes m3-pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.7;
+        transform: scale(1.02);
+    }
+}
+
+/* Success Checkmark Animation */
+@keyframes m3-checkmark {
+    0% {
+        stroke-dashoffset: 100;
+        opacity: 0;
+    }
+
+    100% {
+        stroke-dashoffset: 0;
+        opacity: 1;
+    }
+}
+
+/* Slide In from Right */
+@keyframes m3-slide-in-right {
+    0% {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    100% {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Slide In from Left */
+@keyframes m3-slide-in-left {
+    0% {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+
+    100% {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Scale Up */
+@keyframes m3-scale-up {
+    0% {
+        transform: scale(0.75);
+        opacity: 0;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Scale Down (for exit) */
+@keyframes m3-scale-down {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(0.85);
+        opacity: 0;
+    }
+}
+
+/* Rotate In */
+@keyframes m3-rotate-in {
+    0% {
+        transform: rotate(-10deg) scale(0.9);
+        opacity: 0;
+    }
+
+    100% {
+        transform: rotate(0) scale(1);
+        opacity: 1;
+    }
+}
+
+/* Expand Width (for underlines, progress bars) */
+@keyframes m3-expand-width {
+    0% {
+        width: 0%;
+        opacity: 0;
+    }
+
+    100% {
+        width: 100%;
+        opacity: 1;
+    }
+}
+
+/* Float Animation */
+@keyframes m3-float {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-8px);
+    }
+}
+
+/* Skeleton Loading */
+@keyframes m3-skeleton {
+    0% {
+        background-position: -200% 0;
+    }
+
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+/* ======================================== */
+/* M3 Expressive Animation Utility Classes */
+/* ======================================== */
+
+/* Apply to elements for entrance animations */
+.m3-animate-enter {
+    animation: m3-card-enter var(--motion-duration-medium2) var(--motion-easing-emphasized-decelerate) forwards;
+}
+
+.m3-animate-fade {
+    animation: fade-in var(--motion-duration-medium1) var(--motion-easing-standard) forwards;
+}
+
+.m3-animate-scale {
+    animation: m3-scale-up var(--motion-duration-medium2) var(--motion-easing-expressive) forwards;
+}
+
+.m3-animate-slide-up {
+    animation: slide-up var(--motion-duration-medium2) var(--motion-easing-emphasized-decelerate) forwards;
+}
+
+.m3-animate-pop {
+    animation: m3-chip-pop var(--motion-duration-medium1) var(--motion-easing-bounce) forwards;
+}
+
+/* Staggered animations */
+.m3-stagger-1 {
+    animation-delay: 50ms;
+}
+
+.m3-stagger-2 {
+    animation-delay: 100ms;
+}
+
+.m3-stagger-3 {
+    animation-delay: 150ms;
+}
+
+.m3-stagger-4 {
+    animation-delay: 200ms;
+}
+
+.m3-stagger-5 {
+    animation-delay: 250ms;
+}
+
+.m3-stagger-6 {
+    animation-delay: 300ms;
+}
+
+.m3-stagger-7 {
+    animation-delay: 350ms;
+}
+
+.m3-stagger-8 {
+    animation-delay: 400ms;
+}
+
+/* Interactive states */
+.m3-pressable {
+    transition: transform var(--motion-duration-short4) var(--motion-easing-standard),
+        box-shadow var(--motion-duration-short4) var(--motion-easing-standard);
+}
+
+.m3-pressable:active {
+    transform: scale(0.96);
+}
+
+.m3-hover-lift {
+    transition: transform var(--motion-duration-short4) var(--motion-easing-standard),
+        box-shadow var(--motion-duration-short4) var(--motion-easing-standard);
+}
+
+.m3-hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
 }

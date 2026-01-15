@@ -2,7 +2,7 @@ const { useState, useEffect } = React;
 const BackpackTab = ({ tripId }) => {
     const {
         User, CheckCircle, MapPin, Backpack, Search, Badge,
-        Plus, Minus, Edit, Trash, Button, Modal, InputGroup
+        Plus, Minus, Edit, Trash, Button, Modal, InputGroup, SegmentedControl
     } = window;
     const [backpack, setBackpack] = useState([]);
     const [newItemBackpack, setNewItemBackpack] = useState({ item: "", categoria: "Altro", packed: false, qty: 1, outside: false, ml: "", owner: "Andrea Inardi", collocazione: "" });
@@ -78,38 +78,33 @@ const BackpackTab = ({ tripId }) => {
 
     return (
         <div className="space-y-6">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 mb-4 space-y-3">
-                <div className="flex flex-col gap-2">
-                    <div className="flex gap-2 text-sm">
-                        <div className="flex-1 flex bg-gray-50 p-1 rounded-lg">
-                            {["Andrea Inardi", "Elena Cafasso"].map(owner => {
+            <div className="p-1 mb-4 space-y-3">
+                <div className="flex flex-col gap-3">
+                    {/* Owner & Status Toggles with Sliding Pill Animation */}
+                    <div className="flex flex-col gap-3">
+                        <SegmentedControl
+                            options={["Andrea Inardi", "Elena Cafasso"]}
+                            value={backpackOwnerFilter}
+                            onChange={(owner) => { setBackpackOwnerFilter(owner); setBackpackFilterPlacement("Tutti"); }}
+                            size="large"
+                            renderLabel={(owner, isActive) => {
                                 const ownerItems = backpack.filter(i => i.owner === owner);
                                 const isOwnerComplete = ownerItems.length > 0 && ownerItems.every(i => i.packed);
-
                                 return (
-                                    <button
-                                        key={owner}
-                                        onClick={() => { setBackpackOwnerFilter(owner); setBackpackFilterPlacement("Tutti"); }}
-                                        className={`flex-1 py-1.5 rounded-md font-bold transition-all flex items-center justify-center gap-1 text-xs ${backpackOwnerFilter === owner ? 'bg-white text-black shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
-                                    >
-                                        <User size={12} />
+                                    <>
+                                        <User size={14} />
                                         {owner.split(' ')[0]}
-                                        {isOwnerComplete && <CheckCircle size={12} className="text-green-500 ml-1" />}
-                                    </button>
+                                        {isOwnerComplete && <CheckCircle size={14} className="text-[#137A2F] ml-1" />}
+                                    </>
                                 );
-                            })}
-                        </div>
-                        <div className="flex-[0.8] flex bg-gray-50 p-1 rounded-lg">
-                            {["Tutti", "Dentro", "Fuori"].map(loc => (
-                                <button
-                                    key={loc}
-                                    onClick={() => setBackpackFilterLocation(loc)}
-                                    className={`flex-1 py-1.5 rounded-md font-bold transition-all text-xs ${backpackFilterLocation === loc ? 'bg-white text-black shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
-                                >
-                                    {loc}
-                                </button>
-                            ))}
-                        </div>
+                            }}
+                        />
+
+                        <SegmentedControl
+                            options={["Tutti", "Dentro", "Fuori"]}
+                            value={backpackFilterLocation}
+                            onChange={setBackpackFilterLocation}
+                        />
                     </div>
 
                     {(() => {
@@ -118,14 +113,17 @@ const BackpackTab = ({ tripId }) => {
 
                         if (uniquePlacements.length > 0) {
                             return (
-                                <div className="flex gap-2 overflow-x-auto no-scrollbar pt-1 border-t border-gray-50">
+                                <div className="flex gap-2 overflow-x-auto scroller no-scrollbar py-2">
                                     {placements.map(place => (
                                         <button
                                             key={place}
                                             onClick={() => setBackpackFilterPlacement(place)}
-                                            className={`px-2.5 py-1 rounded-full text-[10px] font-bold whitespace-nowrap border transition-colors flex items-center gap-1 ${backpackFilterPlacement === place ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'}`}
+                                            className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap border transition-all flex items-center gap-1 ${backpackFilterPlacement === place
+                                                ? 'bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] border-transparent'
+                                                : 'bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] border-[var(--md-sys-color-outline)] hover:bg-[var(--md-sys-color-surface-container-highest)]'
+                                                }`}
                                         >
-                                            <MapPin size={10} /> {place}
+                                            <MapPin size={12} /> {place}
                                         </button>
                                     ))}
                                 </div>
@@ -134,7 +132,7 @@ const BackpackTab = ({ tripId }) => {
                     })()}
                 </div>
 
-                <div className="pt-2 border-t border-gray-50">
+                <div className="pt-2">
                     {(() => {
                         const currentItems = backpack.filter(i => i.owner === backpackOwnerFilter);
                         const totalItems = currentItems.length;
@@ -144,41 +142,39 @@ const BackpackTab = ({ tripId }) => {
 
                         return (
                             <>
-                                <div className="flex justify-between items-end mb-1.5">
-                                    <div className="flex items-center gap-2">
-                                        <Backpack size={18} className={isComplete ? "text-green-500" : "text-gray-300"} />
-                                        <div className={`text-xs font-bold uppercase tracking-wide ${isComplete ? "text-green-600" : "text-gray-500"}`}>
-                                            {packedItems}/{totalItems} OGGETTI
+                                <div className="flex justify-between items-end mb-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${isComplete ? 'bg-[#C4EED0] text-[#07210F]' : 'bg-[var(--md-sys-color-surface-variant)] text-[var(--md-sys-color-on-surface-variant)]'}`}>
+                                            <Backpack size={24} />
                                         </div>
-                                        {(() => {
-                                            const totalLiquids = currentItems
-                                                .filter(i => i.categoria === 'Liquido')
-                                                .reduce((acc, curr) => acc + ((Number(curr.ml) || 0) * (Number(curr.qty) || 1)), 0);
+                                        <div>
+                                            <div className={`label-large font-bold uppercase tracking-wide ${isComplete ? "text-[#137A2F]" : "text-[var(--md-sys-color-on-surface-variant)]"}`}>
+                                                {isComplete ? "Zaino Pronto!" : `${packedItems}/${totalItems} Oggetti`}
+                                            </div>
+                                            {(() => {
+                                                const totalLiquids = currentItems
+                                                    .filter(i => i.categoria === 'Liquido')
+                                                    .reduce((acc, curr) => acc + ((Number(curr.ml) || 0) * (Number(curr.qty) || 1)), 0);
 
-                                            if (totalLiquids > 0) {
-                                                return (
-                                                    <div className={`text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 ${totalLiquids > 1000 ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-500'}`}>
-                                                        💧 {totalLiquids}ml {totalLiquids > 1000 && '!'}
-                                                    </div>
-                                                );
-                                            }
-                                        })()}
+                                                if (totalLiquids > 0) {
+                                                    return (
+                                                        <div className={`text-[11px] font-bold mt-0.5 flex items-center gap-1 ${totalLiquids > 1000 ? 'text-[#BA1A1A]' : 'text-[#3E6FB0]'}`}>
+                                                            <span>💧 {totalLiquids}ml</span>
+                                                            {totalLiquids > 1000 && <span className="bg-[#FFDAD6] text-[#410002] px-1 rounded text-[10px]">Over</span>}
+                                                        </div>
+                                                    );
+                                                }
+                                            })()}
+                                        </div>
                                     </div>
-                                    <div className={`text-[10px] font-bold ${isComplete ? "text-green-600 text-sm" : "text-gray-400"}`}>
+                                    <div className="display-small font-bold text-[var(--md-sys-color-primary)] opacity-20">
                                         {percent}%
                                     </div>
                                 </div>
 
-                                {isComplete && (
-                                    <div className="mb-2 bg-green-50 border border-green-100 p-2 rounded-lg flex items-center justify-center gap-2 animate-pulse">
-                                        <span className="text-xl">🚀</span>
-                                        <span className="font-bold text-green-700 text-sm">Zaino Pronto!</span>
-                                    </div>
-                                )}
-
-                                <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                                <div className="w-full bg-[var(--md-sys-color-surface-container-high)] rounded-full h-4 overflow-hidden">
                                     <div
-                                        className={`${isComplete ? 'bg-green-500' : 'bg-black'} h-1.5 rounded-full transition-all duration-500 ease-out`}
+                                        className={`${isComplete ? 'bg-[#137A2F]' : 'bg-[var(--md-sys-color-primary)]'} h-full rounded-full transition-all duration-700 ease-out`}
                                         style={{ width: `${percent}%` }}
                                     ></div>
                                 </div>
@@ -188,7 +184,7 @@ const BackpackTab = ({ tripId }) => {
                 </div>
             </div>
 
-            <Button variant="outline" onClick={() => { setNewItemBackpack(prev => ({ ...prev, owner: backpackOwnerFilter })); setEditingId(null); setActiveModal('backpack'); }} icon={Plus}>
+            <Button onClick={() => { setNewItemBackpack(prev => ({ ...prev, owner: backpackOwnerFilter })); setEditingId(null); setActiveModal('backpack'); }} icon={Plus} className="w-full shadow-md">
                 Aggiungi a {backpackOwnerFilter.split(' ')[0]}
             </Button>
 
@@ -213,31 +209,31 @@ const BackpackTab = ({ tripId }) => {
                     }
 
                     return activeCategories.map(cat => (
-                        <div key={cat}>
-                            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-2 ml-1 flex items-center gap-2">
+                        <div key={cat} className="mb-6">
+                            <h3 className="label-large font-bold text-[var(--md-sys-color-on-surface-variant)] uppercase tracking-wider mb-3 ml-2 flex items-center gap-2 opacity-80">
                                 <Badge type={cat}>{cat}</Badge>
                             </h3>
-                            <div className="bg-white rounded-xl shadow-sm border border-gray-100 divide-y divide-gray-50 overflow-hidden">
+                            <div className="space-y-3">
                                 {filteredBackpack.filter(i => i.categoria === cat).map(item => (
-                                    <div key={item.id} className={`p-4 flex items-center gap-3 transition-colors group ${item.packed ? 'bg-green-50/30' : 'hover:bg-gray-50'}`}>
-                                        <div className="flex flex-col items-center gap-0.5 bg-gray-50 rounded-lg p-0.5 border border-gray-100 min-w-[24px]">
-                                            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateBackpackQty(item.id, item.qty || 1, 1) }} className="p-0.5 hover:bg-gray-200 rounded text-gray-500 font-bold leading-none"><Plus size={10} /></button>
-                                            <span className="text-xs font-bold text-gray-700 text-center select-none">{item.qty || 1}</span>
-                                            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateBackpackQty(item.id, item.qty || 1, -1) }} className="p-0.5 hover:bg-gray-200 rounded text-gray-500 font-bold leading-none"><Minus size={10} /></button>
+                                    <div key={item.id} className={`p-4 rounded-[20px] flex items-center gap-3 transition-colors group ${item.packed ? 'bg-[#E6F4EA] shadow-none opacity-80' : 'bg-[var(--md-sys-color-surface-container-low)] shadow-sm'}`}>
+                                        <div className="flex flex-col items-center gap-1 bg-[var(--md-sys-color-surface)] rounded-xl p-1 min-w-[32px]">
+                                            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateBackpackQty(item.id, item.qty || 1, 1) }} className="p-1 hover:bg-gray-100 rounded text-[var(--md-sys-color-primary)] font-bold leading-none"><Plus size={12} /></button>
+                                            <span className="text-sm font-bold text-[var(--md-sys-color-on-surface)] text-center select-none">{item.qty || 1}</span>
+                                            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateBackpackQty(item.id, item.qty || 1, -1) }} className="p-1 hover:bg-gray-100 rounded text-[var(--md-sys-color-primary)] font-bold leading-none"><Minus size={12} /></button>
                                         </div>
 
                                         <div className="flex-1 min-w-0" onClick={() => togglePacked(item.id, item.packed)}>
                                             <div className="flex items-center gap-2 flex-wrap">
-                                                <span className={`font-medium text-sm transition-all truncate ${item.packed ? 'text-gray-400 line-through decoration-gray-300' : 'text-gray-800'}`}>
+                                                <span className={`title-medium font-bold transition-all truncate ${item.packed ? 'text-[#137A2F] decoration-[#137A2F]' : 'text-[var(--md-sys-color-on-surface)]'}`}>
                                                     {item.item}
                                                 </span>
-                                                {item.ml > 0 && <span className="text-[10px] font-bold text-blue-500 bg-blue-50 px-1 rounded">{item.ml}ml</span>}
-                                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border whitespace-nowrap transition-colors ${item.packed ? 'bg-green-50 text-green-600 border-green-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
+                                                {item.ml > 0 && <span className="text-[10px] font-bold text-white bg-[#3E6FB0] px-1.5 py-0.5 rounded-full">{item.ml}ml</span>}
+                                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap transition-colors ${item.packed ? 'bg-[#C4EED0] text-[#07210F]' : 'bg-[#FFDAD6] text-[#410002]'}`}>
                                                     {item.packed ? "DENTRO" : "FUORI"}
                                                 </span>
                                             </div>
                                             {item.collocazione && (
-                                                <div className="text-[10px] text-gray-400 font-semibold mt-0.5 flex items-center gap-1">
+                                                <div className="text-[11px] text-[var(--md-sys-color-on-surface-variant)] font-medium mt-0.5 flex items-center gap-1">
                                                     <MapPin size={10} /> {item.collocazione}
                                                 </div>
                                             )}
@@ -246,15 +242,14 @@ const BackpackTab = ({ tripId }) => {
                                         <div className="flex items-center gap-1">
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); togglePacked(item.id, item.packed); }}
-                                                className={`p-2.5 rounded-full transition-all duration-200 ${item.packed ? 'bg-green-50 text-green-500 shadow-sm border border-green-100' : 'bg-transparent text-gray-300 hover:text-gray-500 hover:bg-gray-50'}`}
-                                                title={item.packed ? "Rimuovi dallo zaino" : "Metti nello zaino"}
+                                                className={`w-10 h-10 flex items-center justify-center rounded-full transition-all duration-200 ${item.packed ? 'bg-[#137A2F] text-white shadow-md' : 'bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)]'}`}
                                             >
-                                                <Backpack size={20} strokeWidth={item.packed ? 2.5 : 2} />
+                                                <Backpack size={20} />
                                             </button>
-                                            <button onClick={(e) => { e.stopPropagation(); openEditBackpackItem(item); }} className="text-gray-300 hover:text-blue-500 p-2 rounded-full transition-colors">
+                                            <button onClick={(e) => { e.stopPropagation(); openEditBackpackItem(item); }} className="w-10 h-10 flex items-center justify-center rounded-full bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-on-surface)] shadow-sm">
                                                 <Edit size={16} />
                                             </button>
-                                            <button onClick={(e) => { e.stopPropagation(); handleDeleteBackpackItem(item.id); }} className="text-gray-300 hover:text-red-500 p-2 rounded-full transition-colors">
+                                            <button onClick={(e) => { e.stopPropagation(); handleDeleteBackpackItem(item.id); }} className="w-10 h-10 flex items-center justify-center rounded-full bg-[#FFDAD6] text-[#410002] shadow-sm">
                                                 <Trash size={16} />
                                             </button>
                                         </div>
@@ -279,7 +274,7 @@ const BackpackTab = ({ tripId }) => {
                         id="backpack-input"
                         type="text"
                         placeholder="Es. Caricabatterie..."
-                        className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:border-black transition-all"
+                        className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50"
                         value={newItemBackpack.item}
                         onChange={(e) => setNewItemBackpack({ ...newItemBackpack, item: e.target.value })}
                         onKeyDown={(e) => { if (e.key === 'Enter') handleAddBackpackItem() }}
@@ -291,14 +286,14 @@ const BackpackTab = ({ tripId }) => {
                             type="number"
                             min="1"
                             placeholder="1"
-                            className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:border-black transition-all"
+                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50"
                             value={newItemBackpack.qty}
                             onChange={(e) => setNewItemBackpack({ ...newItemBackpack, qty: e.target.value })}
                         />
                     </InputGroup>
                     <InputGroup label="Categoria">
                         <select
-                            className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:border-black transition-all"
+                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all appearance-none text-[var(--md-sys-color-on-surface)]"
                             value={newItemBackpack.categoria}
                             onChange={(e) => setNewItemBackpack({ ...newItemBackpack, categoria: e.target.value })}
                         >
@@ -314,7 +309,7 @@ const BackpackTab = ({ tripId }) => {
                         <input
                             type="number"
                             placeholder="Es. 100"
-                            className="w-full p-3 bg-blue-50 rounded-xl border border-blue-200 outline-none focus:border-blue-500 transition-all font-bold text-blue-900"
+                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all font-bold text-[var(--md-sys-color-on-surface)] placeholder:opacity-50"
                             value={newItemBackpack.ml}
                             onChange={(e) => setNewItemBackpack({ ...newItemBackpack, ml: e.target.value })}
                         />
@@ -323,7 +318,7 @@ const BackpackTab = ({ tripId }) => {
 
                 <InputGroup label="Proprietario">
                     <select
-                        className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:border-black transition-all"
+                        className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all appearance-none text-[var(--md-sys-color-on-surface)]"
                         value={newItemBackpack.owner}
                         onChange={(e) => setNewItemBackpack({ ...newItemBackpack, owner: e.target.value })}
                     >
@@ -336,17 +331,17 @@ const BackpackTab = ({ tripId }) => {
                     <input
                         type="text"
                         placeholder="Es. Tasca davanti, Borsa..."
-                        className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:border-black transition-all"
+                        className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border-0 rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:opacity-50"
                         value={newItemBackpack.collocazione}
                         onChange={(e) => setNewItemBackpack({ ...newItemBackpack, collocazione: e.target.value })}
                     />
                 </InputGroup>
 
-                <div className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer p-3 hover:bg-gray-50 rounded-lg border border-gray-200 transition-all" onClick={() => setNewItemBackpack({ ...newItemBackpack, outside: !newItemBackpack.outside })}>
-                    <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${newItemBackpack.outside ? 'bg-amber-500 border-amber-500 text-white' : 'border-gray-300'}`}>
-                        {newItemBackpack.outside && <CheckCircle size={12} />}
+                <div className={`flex items-center gap-3 p-4 rounded-xl cursor-pointer transition-all select-none border-0 ${newItemBackpack.outside ? 'bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]' : 'bg-[var(--md-sys-color-surface-container-highest)] text-[var(--md-sys-color-on-surface-variant)]'}`} onClick={() => setNewItemBackpack({ ...newItemBackpack, outside: !newItemBackpack.outside })}>
+                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ${newItemBackpack.outside ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)]' : 'bg-[var(--md-sys-color-surface)]'}`}>
+                        {newItemBackpack.outside && <CheckCircle size={16} />}
                     </div>
-                    <span>Fuori dallo zaino</span>
+                    <span className="font-bold">Oggetto fuori dallo zaino</span>
                 </div>
                 <Button onClick={handleAddBackpackItem} className="mt-4">
                     {editingId ? "Salva Modifiche" : "Aggiungi"}
