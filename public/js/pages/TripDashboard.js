@@ -7,7 +7,7 @@ const TripDashboard = () => {
         Card, Badge, Button, Modal, InputGroup, SegmentedControl,
         MapPin, Train, PoundSterling, Euro, DollarSign, CheckCircle, AlertCircle, Plus, X,
         Edit, Trash, User, Smartphone, Search, Minus, Calendar, Clock, Check, ArrowDown,
-        Backpack, FileText, LinkIcon, RefreshCw, Hourglass,
+        Backpack, FileText, LinkIcon, RefreshCw, Hourglass, Star,
         BackpackTab, DocumentsTab
     } = window;
 
@@ -145,8 +145,17 @@ const TripDashboard = () => {
     const handleAddEvent = async () => {
         if (!editingId) return;
         const dayDoc = days.find(d => d.id === editingId);
-        const newEventObj = { id: 'evt_' + Date.now(), ...newItemEvent };
-        const updatedEvents = [...(dayDoc.events || []), newEventObj];
+
+        let updatedEvents;
+        if (newItemEvent.id) {
+            // Edit existing event
+            updatedEvents = dayDoc.events.map(e => e.id === newItemEvent.id ? newItemEvent : e);
+        } else {
+            // Add new event
+            const newEventObj = { id: 'evt_' + Date.now(), ...newItemEvent };
+            updatedEvents = [...(dayDoc.events || []), newEventObj];
+        }
+
         updatedEvents.sort((a, b) => a.time.localeCompare(b.time));
         await getDBCollection("days").doc(editingId).update({ events: updatedEvents });
         setActiveModal(null); setEditingId(null); setNewItemEvent({ type: 'attraction', attractionId: "", customTitle: "", time: "", notes: "" });
@@ -577,27 +586,87 @@ const TripDashboard = () => {
                                                 </div>
                                             </div>
 
-                                            <div className="border-t border-[var(--md-sys-color-outline-variant)]">
+                                            <div className="border-t border-[var(--md-sys-color-outline-variant)] pt-4">
                                                 {(!day.events || day.events.length === 0) ? (
                                                     <div className="p-8 text-center text-[var(--md-sys-color-on-surface-variant)] italic text-sm">
                                                         Nessun evento pianificato per oggi
                                                     </div>
                                                 ) : (
-                                                    <div className="divide-y divide-[var(--md-sys-color-outline-variant)]">
-                                                        {day.events.map(ev => (
-                                                            <div key={ev.id} className="p-4 flex gap-4 hover:bg-[var(--md-sys-color-surface-container)] cursor-pointer group transition-colors">
-                                                                <div className="title-medium font-bold text-[var(--md-sys-color-primary)] min-w-[50px] pt-0.5">{ev.time}</div>
-                                                                <div className="flex-1">
-                                                                    <h4 className="title-medium font-bold flex justify-between items-start">
-                                                                        <span className={ev.type === 'custom' ? 'text-[var(--md-sys-color-on-surface)]' : 'text-[var(--md-sys-color-primary)]'}>
-                                                                            {ev.type === 'custom' ? ev.customTitle : (itinerary.find(i => i.id === ev.attractionId)?.nome || 'Attrazione')}
-                                                                        </span>
-                                                                        <button onClick={(e) => { e.stopPropagation(); handleDeleteEvent(day.id, ev.id); }} className="text-[var(--md-sys-color-error)] opacity-0 group-hover:opacity-100 transition-all"><X size={16} /></button>
-                                                                    </h4>
-                                                                    {ev.notes && <p className="text-xs text-[var(--md-sys-color-on-surface-variant)] bg-[var(--md-sys-color-surface-variant)]/10 inline-block px-2 py-0.5 rounded-lg mt-1 font-medium">{ev.notes}</p>}
+                                                    <div className="space-y-0 pb-4">
+                                                        {day.events.map((ev, evIndex) => {
+                                                            const attraction = ev.type === 'attraction' ? itinerary.find(i => i.id === ev.attractionId) : null;
+                                                            const isLast = evIndex === day.events.length - 1;
+
+                                                            return (
+                                                                <div
+                                                                    key={ev.id}
+                                                                    onClick={() => { setEditingId(day.id); setNewItemEvent(ev); setActiveModal('event'); }}
+                                                                    className="relative pl-4 pb-6 last:pb-0 group"
+                                                                >
+                                                                    {/* Timeline Line */}
+                                                                    {!isLast && (
+                                                                        <div className="absolute left-[27px] top-[40px] bottom-[-10px] w-0.5 bg-[var(--md-sys-color-outline-variant)] opacity-50 z-0"></div>
+                                                                    )}
+
+                                                                    <div className="flex gap-4 relative z-10">
+                                                                        {/* Time & Dot */}
+                                                                        <div className="flex flex-col items-center gap-2 pt-1 min-w-[50px]">
+                                                                            <div className="text-sm font-bold text-[var(--md-sys-color-primary)] font-mono bg-[var(--md-sys-color-surface-container-low)] z-10 py-1">{ev.time}</div>
+                                                                            <div className="w-3 h-3 rounded-full border-2 border-[var(--md-sys-color-primary)] bg-[var(--md-sys-color-surface-container-low)] z-10"></div>
+                                                                        </div>
+
+                                                                        {/* Card Content */}
+                                                                        <div className="flex-1 bg-[var(--md-sys-color-surface-container-high)] rounded-[20px] p-3 shadow-sm border border-[var(--md-sys-color-outline-variant)] hover:shadow-md transition-all active:scale-[0.98] cursor-pointer overflow-hidden flex gap-3">
+
+                                                                            {/* Image Thumbnail */}
+                                                                            <div className="w-20 h-20 rounded-[12px] bg-[var(--md-sys-color-surface-variant)] overflow-hidden shrink-0 relative">
+                                                                                {attraction && attraction.img ? (
+                                                                                    <img src={attraction.img} alt={attraction.nome} className="w-full h-full object-cover" />
+                                                                                ) : (
+                                                                                    <div className="w-full h-full flex items-center justify-center text-[var(--md-sys-color-on-surface-variant)] opacity-50">
+                                                                                        {ev.type === 'custom' ? <Star size={24} /> : <MapPin size={24} />}
+                                                                                    </div>
+                                                                                )}
+                                                                                {/* Category Overlay on Image (Small) */}
+                                                                                {attraction && (
+                                                                                    <div className="absolute bottom-0 left-0 right-0 p-1 bg-black/40 backdrop-blur-[2px] flex justify-center">
+                                                                                        <span className="text-[8px] font-bold text-white uppercase tracking-wider truncate px-1">{attraction.categoria}</span>
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+
+                                                                            <div className="flex-1 min-w-0 py-1 flex flex-col justify-between">
+                                                                                <div>
+                                                                                    <div className="flex justify-between items-start">
+                                                                                        <h4 className={`font-bold text-[15px] leading-tight line-clamp-2 ${ev.type === 'custom' ? 'text-[var(--md-sys-color-on-surface)]' : 'text-[var(--md-sys-color-primary)]'}`}>
+                                                                                            {ev.type === 'custom' ? ev.customTitle : (attraction?.nome || 'Attrazione')}
+                                                                                        </h4>
+                                                                                        <button onClick={(e) => { e.stopPropagation(); handleDeleteEvent(day.id, ev.id); }} className="w-8 h-8 flex items-center justify-center text-[var(--md-sys-color-on-surface-variant)] hover:bg-[#FFDAD6] hover:text-[#410002] rounded-full transition-colors"><X size={16} /></button>
+                                                                                    </div>
+
+                                                                                    {/* Meta Info */}
+                                                                                    {attraction && attraction.quartiere && (
+                                                                                        <div className="flex items-center gap-1 text-xs text-[var(--md-sys-color-on-surface-variant)] mt-1 truncate">
+                                                                                            <MapPin size={10} /> {attraction.quartiere}
+                                                                                        </div>
+                                                                                    )}
+                                                                                </div>
+
+                                                                                {/* Badges & Notes */}
+                                                                                <div className="flex flex-wrap gap-1.5 mt-2">
+                                                                                    {ev.type === 'custom' && (
+                                                                                        <span className="text-[10px] bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider">
+                                                                                            {ev.customTitle ? 'Note' : 'Altro'}
+                                                                                        </span>
+                                                                                    )}
+                                                                                    {ev.notes && <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] flex items-center gap-1 bg-[var(--md-sys-color-surface-variant)]/30 px-2 py-0.5 rounded-md font-medium truncate max-w-full"><FileText size={10} /> {ev.notes}</span>}
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
                                                                 </div>
-                                                            </div>
-                                                        ))}
+                                                            );
+                                                        })}
                                                     </div>
                                                 )}
                                             </div>
@@ -907,37 +976,38 @@ const TripDashboard = () => {
             </Modal>
 
             {/* M3 Expressive Navigation */}
-            {(() => {
-                const tabs = ["itinerary", "attractions", "expenses", "backpack", "documents"];
-                const labels = {
-                    itinerary: "Giornate",
-                    attractions: "Luoghi",
-                    expenses: "Spese",
-                    backpack: "Zaino",
-                    documents: "Doc"
-                };
-                const activeIndex = tabs.indexOf(activeTab);
+            {
+                (() => {
+                    const tabs = ["itinerary", "attractions", "expenses", "backpack", "documents"];
+                    const labels = {
+                        itinerary: "Giornate",
+                        attractions: "Luoghi",
+                        expenses: "Spese",
+                        backpack: "Zaino",
+                        documents: "Doc"
+                    };
+                    const activeIndex = tabs.indexOf(activeTab);
 
-                // Calculate floating FAB position (each tab is 20% of width, FAB is 48px so offset by 24px)
-                const fabLeft = `calc(${activeIndex * 20}% + 10% - 24px)`;
+                    // Calculate floating FAB position (each tab is 20% of width, FAB is 48px so offset by 24px)
+                    const fabLeft = `calc(${activeIndex * 20}% + 10% - 24px)`;
 
-                // SVG path parameters
-                const barHeight = 64;
-                const notchRadius = 26; // Half of FAB 48px + some padding
-                const notchDepth = 24; // How deep the notch goes
+                    // SVG path parameters
+                    const barHeight = 64;
+                    const notchRadius = 26; // Half of FAB 48px + some padding
+                    const notchDepth = 24; // How deep the notch goes
 
-                // Calculate notch center X (viewBox is 400 units wide)
-                const notchCenterX = (activeIndex * 20 + 10) * 4;
+                    // Calculate notch center X (viewBox is 400 units wide)
+                    const notchCenterX = (activeIndex * 20 + 10) * 4;
 
-                return (
-                    <nav className="expressive-nav">
-                        <div className="expressive-nav-inner">
-                            {/* SVG Background with curved notch */}
-                            <div className="expressive-nav-bg">
-                                <svg viewBox="0 0 400 64" preserveAspectRatio="none">
-                                    <path
-                                        className="nav-bg-path"
-                                        d={`
+                    return (
+                        <nav className="expressive-nav">
+                            <div className="expressive-nav-inner">
+                                {/* SVG Background with curved notch */}
+                                <div className="expressive-nav-bg">
+                                    <svg viewBox="0 0 400 64" preserveAspectRatio="none">
+                                        <path
+                                            className="nav-bg-path"
+                                            d={`
                                             M 0 0
                                             L ${notchCenterX - notchRadius - 8} 0
                                             C ${notchCenterX - notchRadius} 0
@@ -951,48 +1021,49 @@ const TripDashboard = () => {
                                             L 0 ${barHeight}
                                             Z
                                         `}
-                                    />
-                                </svg>
-                            </div>
+                                        />
+                                    </svg>
+                                </div>
 
-                            {/* Floating Active Button */}
-                            <div
-                                className="floating-fab"
-                                style={{ left: fabLeft }}
-                            >
-                                {activeTab === 'itinerary' && <Calendar size={20} />}
-                                {activeTab === 'attractions' && <MapPin size={20} />}
-                                {activeTab === 'expenses' && <PoundSterling size={20} />}
-                                {activeTab === 'backpack' && <Backpack size={20} />}
-                                {activeTab === 'documents' && <FileText size={20} />}
-                            </div>
+                                {/* Floating Active Button */}
+                                <div
+                                    className="floating-fab"
+                                    style={{ left: fabLeft }}
+                                >
+                                    {activeTab === 'itinerary' && <Calendar size={20} />}
+                                    {activeTab === 'attractions' && <MapPin size={20} />}
+                                    {activeTab === 'expenses' && <PoundSterling size={20} />}
+                                    {activeTab === 'backpack' && <Backpack size={20} />}
+                                    {activeTab === 'documents' && <FileText size={20} />}
+                                </div>
 
-                            {/* Navigation Items */}
-                            <div className="nav-items-container">
-                                {tabs.map((t, index) => {
-                                    const isActive = activeTab === t;
-                                    return (
-                                        <button
-                                            key={t}
-                                            onClick={() => setActiveTab(t)}
-                                            className={`expressive-nav-item ${isActive ? 'active' : ''}`}
-                                        >
-                                            <div className="nav-icon">
-                                                {t === 'itinerary' && <Calendar size={22} />}
-                                                {t === 'attractions' && <MapPin size={22} />}
-                                                {t === 'expenses' && <PoundSterling size={22} />}
-                                                {t === 'backpack' && <Backpack size={22} />}
-                                                {t === 'documents' && <FileText size={22} />}
-                                            </div>
-                                            <span className="nav-label">{labels[t]}</span>
-                                        </button>
-                                    );
-                                })}
+                                {/* Navigation Items */}
+                                <div className="nav-items-container">
+                                    {tabs.map((t, index) => {
+                                        const isActive = activeTab === t;
+                                        return (
+                                            <button
+                                                key={t}
+                                                onClick={() => setActiveTab(t)}
+                                                className={`expressive-nav-item ${isActive ? 'active' : ''}`}
+                                            >
+                                                <div className="nav-icon">
+                                                    {t === 'itinerary' && <Calendar size={22} />}
+                                                    {t === 'attractions' && <MapPin size={22} />}
+                                                    {t === 'expenses' && <PoundSterling size={22} />}
+                                                    {t === 'backpack' && <Backpack size={22} />}
+                                                    {t === 'documents' && <FileText size={22} />}
+                                                </div>
+                                                <span className="nav-label">{labels[t]}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
                             </div>
-                        </div>
-                    </nav>
-                );
-            })()}
+                        </nav>
+                    );
+                })()
+            }
         </div >
     );
 };
