@@ -54,6 +54,7 @@ const TripDashboard = () => {
     const [editingId, setEditingId] = useState(null);
     const [viewingItem, setViewingItem] = useState(null);
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: "", message: "", onConfirm: null });
+    const [debtsData, setDebtsData] = useState(null);
 
     // Modals Data
     const [newItemItinerary, setNewItemItinerary] = useState({ nome: "", categoria: "Museo", quartiere: "", durata: "", orari: "", eccezioni: "", img: "", mapEmbed: "" });
@@ -179,6 +180,75 @@ const TripDashboard = () => {
         await db.collection("trips").doc(tripId).update(newItemTripDetails);
         setTripDetails(p => ({ ...p, ...newItemTripDetails }));
         setActiveModal(null);
+    };
+
+    // Debt Calculation
+    const calculateDebts = () => {
+        const participants = tripDetails.participants || ["Andrea Inardi", "Elena Cafasso"];
+        const participantCount = participants.length;
+
+        // Calculate total paid by each person (in EUR)
+        const paidByPerson = {};
+        participants.forEach(p => paidByPerson[p] = 0);
+
+        // Sum expenses for each person who paid
+        expenses.forEach(expense => {
+            if (expense.pagato && expense.chi) {
+                const amountInEUR = expense.valuta === "€"
+                    ? expense.costo
+                    : expense.costo * EXCHANGE_RATE;
+                paidByPerson[expense.chi] = (paidByPerson[expense.chi] || 0) + amountInEUR;
+            }
+        });
+
+        // Add transport costs
+        transport.forEach(t => {
+            if (t.pagato && t.chi) {
+                const { amount, currency } = parseCost(t.costo);
+                const amountInEUR = currency === "€" ? amount : amount * EXCHANGE_RATE;
+                paidByPerson[t.chi] = (paidByPerson[t.chi] || 0) + amountInEUR;
+            }
+        });
+
+        // Calculate total and fair share
+        const totalPaid = Object.values(paidByPerson).reduce((sum, val) => sum + val, 0);
+        const fairShare = totalPaid / participantCount;
+
+        // Calculate balances (positive = owed money, negative = owes money)
+        const balances = {};
+        participants.forEach(p => {
+            balances[p] = (paidByPerson[p] || 0) - fairShare;
+        });
+
+        // Calculate debts (who owes whom)
+        const debts = [];
+        const creditors = Object.entries(balances).filter(([_, bal]) => bal > 0.01).map(([p, bal]) => ({ person: p, amount: bal }));
+        const debtors = Object.entries(balances).filter(([_, bal]) => bal < -0.01).map(([p, bal]) => ({ person: p, amount: -bal }));
+
+        // Match debtors with creditors
+        creditors.forEach(creditor => {
+            let remaining = creditor.amount;
+            debtors.forEach(debtor => {
+                if (remaining > 0.01 && debtor.amount > 0.01) {
+                    const amount = Math.min(remaining, debtor.amount);
+                    debts.push({
+                        from: debtor.person,
+                        to: creditor.person,
+                        amount: amount
+                    });
+                    remaining -= amount;
+                    debtor.amount -= amount;
+                }
+            });
+        });
+
+        return { debts, paidByPerson, fairShare, totalPaid };
+    };
+
+    const handleShowDebts = () => {
+        const data = calculateDebts();
+        setDebtsData(data);
+        setActiveModal('debts');
     };
 
     // Derived State
@@ -477,7 +547,7 @@ const TripDashboard = () => {
                             {/* Moved Stats Here - Only for Expenses - Material 3 Expressive Complementary Shapes */}
                             <div className="grid grid-cols-2 gap-3">
                                 {/* GIÀ PAGATO - Left rounded shape */}
-                                <div className={`payment-card payment-card-paid relative overflow-hidden p-5 rounded-l-[32px] rounded-r-[12px] flex flex-col items-start gap-2 shadow-lg border-2 ${themeMode === 'dark' ? 'bg-green-900 border-green-700 text-green-100' : 'bg-gradient-to-br from-[#C4EED0] via-[#D8F5E0] to-[#E6F9EE] border-[#A3E4B5]/50 text-[#0A5C1F]'}`}>
+                                <div onClick={handleShowDebts} className={`payment-card payment-card-paid relative overflow-hidden p-5 rounded-l-[32px] rounded-r-[12px] flex flex-col items-start gap-2 shadow-lg border-2 cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] ${themeMode === 'dark' ? 'bg-green-900 border-green-700 text-green-100' : 'bg-gradient-to-br from-[#C4EED0] via-[#D8F5E0] to-[#E6F9EE] border-[#A3E4B5]/50 text-[#0A5C1F]'}`}>
                                     {/* Decorative background element */}
                                     <div className={`absolute -right-4 -top-4 w-20 h-20 rounded-full ${themeMode === 'dark' ? 'bg-green-800/20' : 'bg-[#0A5C1F]/5'}`}></div>
                                     <div className={`absolute -right-1 -bottom-1 w-12 h-12 rounded-full ${themeMode === 'dark' ? 'bg-green-800/30' : 'bg-[#0A5C1F]/8'}`}></div>
@@ -848,8 +918,16 @@ const TripDashboard = () => {
                         onChange={e => setNewItemExpense({ ...newItemExpense, chi: e.target.value })}
                     >
                         <option value="">-- Seleziona --</option>
-                        <option value="Andrea Inardi">Andrea Inardi</option>
-                        <option value="Elena Cafasso">Elena Cafasso</option>
+                        {(tripDetails.participants && tripDetails.participants.length > 0) ? (
+                            tripDetails.participants.map(p => (
+                                <option key={p} value={p}>{p}</option>
+                            ))
+                        ) : (
+                            <>
+                                <option value="Andrea Inardi">Andrea Inardi</option>
+                                <option value="Elena Cafasso">Elena Cafasso</option>
+                            </>
+                        )}
                     </select>
                 </InputGroup>
 
@@ -997,6 +1075,98 @@ const TripDashboard = () => {
                 <p>Durata: {viewingItem?.durata}</p>
                 {viewingItem?.mapEmbed && <iframe src={viewingItem.mapEmbed} className="w-full h-48 border-0 rounded-lg mt-4" />}
             </Modal>
+
+            {/* Debt Calculation Modal - Clean Modern Design */}
+            <Modal isOpen={activeModal === 'debts'} onClose={() => { setActiveModal(null); setDebtsData(null); }} title="Riepilogo Debiti">
+                {debtsData && (
+                    <div className="space-y-5">
+                        {/* Summary Stats - Compact Cards */}
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="bg-[var(--md-sys-color-surface-container-high)] rounded-[24px] p-4 border border-[var(--md-sys-color-outline-variant)]">
+                                <div className="label-small text-[var(--md-sys-color-on-surface-variant)] font-semibold mb-1">Totale Speso</div>
+                                <div className="headline-large text-[var(--md-sys-color-on-surface)] font-black">€{debtsData.totalPaid.toFixed(2)}</div>
+                            </div>
+                            <div className="bg-[var(--md-sys-color-primary-container)] rounded-[24px] p-4 border border-[var(--md-sys-color-primary)]/20">
+                                <div className="label-small text-[var(--md-sys-color-on-primary-container)] font-semibold mb-1 opacity-80">Per Persona</div>
+                                <div className="headline-large text-[var(--md-sys-color-on-primary-container)] font-black">€{debtsData.fairShare.toFixed(2)}</div>
+                            </div>
+                        </div>
+
+                        {/* Who Paid What - Simple List */}
+                        <div>
+                            <h3 className="label-large text-[var(--md-sys-color-on-surface-variant)] font-bold uppercase tracking-wider mb-3">Dettaglio Pagamenti</h3>
+                            <div className="space-y-2">
+                                {Object.entries(debtsData.paidByPerson).map(([person, amount]) => {
+                                    const percentage = ((amount / debtsData.totalPaid) * 100).toFixed(0);
+                                    return (
+                                        <div key={person} className="flex items-center justify-between p-3 rounded-[16px] bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)]">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-full bg-[var(--md-sys-color-primary-container)] flex items-center justify-center">
+                                                    <User size={18} className="text-[var(--md-sys-color-on-primary-container)]" strokeWidth={2.5} />
+                                                </div>
+                                                <div>
+                                                    <div className="body-large font-bold text-[var(--md-sys-color-on-surface)]">{person.split(' ')[0]}</div>
+                                                    <div className="label-small text-[var(--md-sys-color-on-surface-variant)]">{percentage}% del totale</div>
+                                                </div>
+                                            </div>
+                                            <div className="title-large font-black text-[var(--md-sys-color-primary)]">€{amount.toFixed(2)}</div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Debts - Big Clear Cards */}
+                        {debtsData.debts.length > 0 ? (
+                            <div>
+                                <h3 className="label-large text-[var(--md-sys-color-on-surface-variant)] font-bold uppercase tracking-wider mb-3">Transazioni da Effettuare</h3>
+                                <div className="space-y-3">
+                                    {debtsData.debts.map((debt, index) => (
+                                        <div key={index} className="bg-[var(--md-sys-color-primary-container)] rounded-[28px] p-4 border-2 border-[var(--md-sys-color-primary)]/30">
+                                            {/* From -> To with clear arrow */}
+                                            <div className="flex items-center justify-between gap-2 mb-4">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-10 h-10 rounded-full bg-[var(--md-sys-color-primary)] flex items-center justify-center flex-shrink-0">
+                                                        <User size={18} className="text-[var(--md-sys-color-on-primary)]" strokeWidth={2.5} />
+                                                    </div>
+                                                    <div className="body-large font-bold text-[var(--md-sys-color-on-primary-container)]">{debt.from.split(' ')[0]}</div>
+                                                </div>
+
+                                                <div className="flex items-center px-1 flex-shrink-0">
+                                                    <ArrowDown size={24} className="text-[var(--md-sys-color-on-primary-container)]" strokeWidth={3.5} style={{ transform: 'rotate(-90deg)' }} />
+                                                </div>
+
+                                                <div className="flex items-center gap-2">
+                                                    <div className="body-large font-bold text-[var(--md-sys-color-on-primary-container)]">{debt.to.split(' ')[0]}</div>
+                                                    <div className="w-10 h-10 rounded-full bg-[var(--md-sys-color-tertiary)] flex items-center justify-center flex-shrink-0">
+                                                        <User size={18} className="text-[var(--md-sys-color-on-tertiary)]" strokeWidth={2.5} />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Amount - Big and Clear */}
+                                            <div className="text-center bg-[var(--md-sys-color-surface)] rounded-[20px] p-4">
+                                                <div className="display-large font-black text-[var(--md-sys-color-primary)]">€{debt.amount.toFixed(2)}</div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="bg-[var(--md-sys-color-tertiary-container)] rounded-[28px] p-8 text-center border-2 border-[var(--md-sys-color-tertiary)]/30">
+                                <div className="w-16 h-16 rounded-full bg-[var(--md-sys-color-tertiary)] flex items-center justify-center mx-auto mb-4">
+                                    <Check size={40} className="text-[var(--md-sys-color-on-tertiary)]" strokeWidth={3} />
+                                </div>
+                                <div className="headline-large text-[var(--md-sys-color-on-tertiary-container)] font-bold mb-2">Tutto a Posto! 🎉</div>
+                                <div className="body-medium text-[var(--md-sys-color-on-tertiary-container)]">Non ci sono debiti da saldare</div>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </Modal>
+
+
+
 
             {/* M3 Expressive Navigation */}
             {
