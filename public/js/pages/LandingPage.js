@@ -233,7 +233,7 @@ const LandingPage = () => {
                         type="text"
                         value={newTripData.title}
                         onChange={e => setNewTripData({ ...newTripData, title: e.target.value })}
-                        className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl focus:ring-2 focus:ring-[var(--md-sys-color-primary)] outline-none transition-all placeholder:text-[var(--md-sys-color-on-surface-variant)] font-bold text-lg"
+                        className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl focus:ring-2 focus:ring-[var(--md-sys-color-primary)] outline-none transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)] font-bold text-lg"
                         placeholder="Es. Londra 2026"
                     />
                 </InputGroup>
@@ -243,7 +243,7 @@ const LandingPage = () => {
                             type="text"
                             value={newTripData.flag}
                             onChange={e => setNewTripData({ ...newTripData, flag: e.target.value })}
-                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none text-center text-2xl"
+                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none text-center text-2xl text-[var(--md-sys-color-on-surface)]"
                             placeholder="🇬🇧"
                         />
                     </InputGroup>
@@ -252,29 +252,19 @@ const LandingPage = () => {
                             type="text"
                             value={newTripData.dates}
                             onChange={e => setNewTripData({ ...newTripData, dates: e.target.value })}
-                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none text-sm font-medium"
+                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none text-sm font-medium text-[var(--md-sys-color-on-surface)]"
                             placeholder="Es. 25 Feb - 2 Mar"
                         />
                     </InputGroup>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3">
                     <InputGroup label="Valuta">
                         <input
                             type="text"
                             value={newTripData.currencySymbol}
                             onChange={e => setNewTripData({ ...newTripData, currencySymbol: e.target.value })}
-                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none text-center text-lg font-bold"
+                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none text-center text-lg font-bold text-[var(--md-sys-color-on-surface)]"
                             placeholder="£"
-                        />
-                    </InputGroup>
-                    <InputGroup label="Cambio (Vs Euro)">
-                        <input
-                            type="number"
-                            step="0.01"
-                            value={newTripData.exchangeRate}
-                            onChange={e => setNewTripData({ ...newTripData, exchangeRate: e.target.value })}
-                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none text-center font-bold"
-                            placeholder="1"
                         />
                     </InputGroup>
                 </div>
@@ -288,7 +278,7 @@ const LandingPage = () => {
                             onChange={(e) => setNewParticipantName(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && addParticipant()}
                             placeholder="Aggiungi persona..."
-                            className="flex-1 p-3 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none"
+                            className="flex-1 p-3 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none text-[var(--md-sys-color-on-surface)]"
                         />
                         <button onClick={addParticipant} className="bg-[var(--md-sys-color-primary-container)] text-[var(--md-sys-color-on-primary-container)] p-3 rounded-xl font-bold">
                             <Plus size={20} />

@@ -9,7 +9,7 @@ const TripDashboard = () => {
         Edit, Trash, User, Smartphone, Search, Minus, Calendar, Clock, Check, ArrowDown,
         Backpack, FileText, LinkIcon, RefreshCw, Hourglass, Star,
         BackpackTab, DocumentsTab, ThemeToggle,
-        TicketScanner, TicketView, QrCode, Bus, Car, Plane, Ship
+        TicketScanner, TicketView, QrCode, Bus, Car, Plane, Ship, CameraCapture, Image
     } = window;
 
     const { tripId, tab } = useParams();
@@ -63,8 +63,10 @@ const TripDashboard = () => {
     const [newItemItinerary, setNewItemItinerary] = useState({ nome: "", categoria: "Museo", quartiere: "", durata: "", orari: "", eccezioni: "", img: "", mapEmbed: "" });
     const [newItemDay, setNewItemDay] = useState({ data: "" });
     const [newItemEvent, setNewItemEvent] = useState({ type: 'attraction', attractionId: "", customTitle: "", time: "", notes: "" });
-    const [newItemTransport, setNewItemTransport] = useState({ dettaglio: "", partenza: "", arrivo: "", data: "", ora: "", costo: "", pagato: false, prenotato: false, ticket: "" });
-    const [newItemExpense, setNewItemExpense] = useState({ item: "", costo: "", valuta: "£", pagato: false, prenotato: false, chi: "", note: "" });
+    const [newItemTransport, setNewItemTransport] = useState({ dettaglio: "", partenza: "", arrivo: "", data: "", ora: "", costo: "", pagato: false, prenotato: false, ticket: "", terminal: "", gate: "" });
+    const [newItemExpense, setNewItemExpense] = useState({ item: "", costo: "", valuta: "£", pagato: false, prenotato: false, chi: "", note: "", data: new Date().toISOString().split('T')[0] });
+    const [isAnalyzingReceipt, setIsAnalyzingReceipt] = useState(false);
+    const [showCamera, setShowCamera] = useState(false);
     const [newItemTripDetails, setNewItemTripDetails] = useState({ title: "", dates: "", flag: "" });
 
     // Filters
@@ -81,6 +83,160 @@ const TripDashboard = () => {
 
     // Helpers
     const getDBCollection = (collectionName) => db.collection("trips").doc(tripId).collection(collectionName);
+
+    const getCurrencyCode = (symbol) => {
+        const map = { "£": "GBP", "$": "USD", "¥": "JPY", "€": "EUR" };
+        return map[symbol] || "GBP"; // Default to GBP if unknown, or handle appropriately
+    };
+
+    const fetchExchangeRate = async (fromCurrency, toCurrency) => {
+        const apiKey = window.EXCHANGE_RATE_API_KEY;
+        if (!apiKey || apiKey === "YOUR_KEY_HERE") return null;
+        try {
+            console.log(`Fetching rate from ${fromCurrency} to ${toCurrency}...`);
+            const response = await fetch(`https://v6.exchangerate-api.com/v6/${apiKey}/pair/${fromCurrency}/${toCurrency}`);
+            const data = await response.json();
+            if (data.result === "success") {
+                console.log("Rate fetched:", data.conversion_rate);
+                return data.conversion_rate;
+            }
+            console.warn("API Error:", data);
+            return null;
+        } catch (error) {
+            console.error("Error fetching exchange rate:", error);
+            return null;
+        }
+    };
+
+    // Amadeus API Helpers
+    const fetchAmadeusToken = async () => {
+        const clientId = window.AMADEUS_CLIENT_ID;
+        const clientSecret = window.AMADEUS_CLIENT_SECRET;
+        if (!clientId || !clientSecret || clientId.includes("YOUR_")) {
+            console.error("Amadeus Keys missing");
+            return null;
+        }
+
+        try {
+            // Using corsproxy.io to bypass CORS restrictions for frontend-only app
+            const response = await fetch("https://corsproxy.io/?https://test.api.amadeus.com/v1/security/oauth2/token", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: `grant_type=client_credentials&client_id=${clientId}&client_secret=${clientSecret}`
+            });
+            const data = await response.json();
+            if (!data.access_token) {
+                console.error("No access token in response", data);
+                return null;
+            }
+            return data.access_token;
+        } catch (error) {
+            console.error("Error fetching Amadeus token:", error);
+            return null;
+        }
+    };
+
+    const fetchFlightDetails = async (flightCode) => {
+        if (!flightCode) return;
+
+        // Parse flight code (e.g. AZ203 -> Carrier: AZ, Number: 203)
+        const match = flightCode.match(/^([A-Z0-9]+?)(\d+)$/i);
+        if (!match) {
+            alert("Formato volo non valido. Usa es. AZ203, BA2564");
+            return;
+        }
+        const carrier = match[1].toUpperCase();
+        let flightNumber = match[2];
+
+        // Map Common ICAO (3 letters) to IATA (2 letters)
+        // Amadeus API expects IATA codes
+        const iataMap = {
+            'EJU': 'U2', 'EZY': 'U2', // EasyJet
+            'RYR': 'FR', // Ryanair
+            'WZZ': 'W6', // Wizz Air
+            'BAW': 'BA', // British Airways
+            'AZA': 'AZ', // ITA/Alitalia
+            'Lufthansa': 'LH', 'DLH': 'LH'
+        };
+
+        const apiCarrier = iataMap[carrier] || carrier;
+
+        if (apiCarrier.length > 2) {
+            alert(`Attenzione: '${carrier}' sembra un codice ICAO (3 lettere).\nLe API richiedono solitamente codici IATA (2 lettere, es. U2, AZ, FR).\n\nProvo comunque, ma se fallisce usa il codice a 2 lettere.`);
+        }
+
+        // Determine Date: User input or Default today
+        let searchDate = new Date().toISOString().split('T')[0];
+        if (newItemTransport.data) {
+            // Support YYYY-MM-DD
+            if (newItemTransport.data.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                searchDate = newItemTransport.data;
+            }
+            // Support DD/MM/YYYY
+            else if (newItemTransport.data.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/)) {
+                const parts = newItemTransport.data.split('/');
+                const d = parts[0].padStart(2, '0');
+                const m = parts[1].padStart(2, '0');
+                const y = parts[2];
+                searchDate = `${y}-${m}-${d}`;
+            }
+        }
+
+        const token = await fetchAmadeusToken();
+        if (!token) {
+            alert("Errore Autenticazione API. Controlla console per dettagli.");
+            return;
+        }
+
+        try {
+            console.log(`Tracking flight ${apiCarrier}${flightNumber} on ${searchDate}`);
+            const response = await fetch(`https://corsproxy.io/?https://test.api.amadeus.com/v2/schedule/flights?carrierCode=${apiCarrier}&flightNumber=${flightNumber}&scheduledDepartureDate=${searchDate}`, {
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+            const data = await response.json();
+
+            if (data.data && data.data.length > 0) {
+                const flight = data.data[0];
+                const segment = flight.flightPoints[0]; // Departure
+                const arrival = flight.flightPoints[1]; // Arrival
+
+                // Map data to our format
+                const departureTime = segment.timings.find(t => t.qualifier === "STD")?.value;
+                const arrivalTime = arrival.timings.find(t => t.qualifier === "STA")?.value;
+
+                // Extract time HH:MM
+                const formatTime = (isoString) => isoString ? isoString.split('T')[1].substring(0, 5) : "";
+
+                // Format for display (Italian style) could be nice: DD/MM/YYYY
+                const dateObj = new Date(departureTime);
+                const dateDisplay = dateObj.toLocaleDateString('it-IT'); // DD/MM/YYYY
+
+                setNewItemTransport(prev => ({
+                    ...prev,
+                    dettaglio: `Volo ${apiCarrier}${flightNumber}`,
+                    partenza: segment.iataCode,
+                    arrivo: arrival.iataCode,
+                    data: dateDisplay,
+                    ora: formatTime(departureTime),
+                    terminal: segment.terminal?.code || "",
+                    gate: segment.gate?.mainGateNumber || ""
+                }));
+                alert(`Volo Trovato! ${segment.iataCode} -> ${arrival.iataCode}`);
+            } else {
+                console.warn("API Response:", data);
+                if (data.errors) {
+                    const errorDetails = data.errors.map(e => e.detail || e.title).join("\n");
+                    alert(`Errore API Amadeus:\n${errorDetails}`);
+                } else {
+                    alert(`Nessun volo trovato per la data ${searchDate} (Codice: ${apiCarrier}${flightNumber}).\n\nNota: L'ambiente di TEST di Amadeus potrebbe non avere dati aggiornati per voli futuri (2026).\n\nProva a inserire i dati manualmente.`);
+                }
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Errore durante il tracking del volo. Vedi console.");
+        }
+    };
+
 
     // Listeners
     useEffect(() => {
@@ -129,16 +285,57 @@ const TripDashboard = () => {
         if (!newItemTransport.dettaglio) return;
         if (editingId) await getDBCollection("transport").doc(editingId).update(newItemTransport);
         else await getDBCollection("transport").add(newItemTransport);
-        setActiveModal(null); setEditingId(null); setNewItemTransport({ dettaglio: "", partenza: "", arrivo: "", data: "", ora: "", costo: "", pagato: false, prenotato: false, ticket: "" });
+        setActiveModal(null); setEditingId(null); setNewItemTransport({ dettaglio: "", partenza: "", arrivo: "", data: "", ora: "", costo: "", pagato: false, prenotato: false, ticket: "", terminal: "", gate: "" });
     };
     const handleDeleteTransport = (id) => requestConfirm("Elimina Spostamento", "Sicuro?", async () => await getDBCollection("transport").doc(id).delete());
     const toggleTransportPaid = (id, status) => getDBCollection("transport").doc(id).update({ pagato: !status });
     const toggleTransportBooked = (id, status) => getDBCollection("transport").doc(id).update({ prenotato: !status });
 
     // Expense Handlers
+    const processReceiptFile = async (file) => {
+        if (!file) return;
+
+        setIsAnalyzingReceipt(true);
+        try {
+            const result = await window.GeminiScanner.scanReceipt(file);
+            if (result) {
+                setNewItemExpense(prev => ({
+                    ...prev,
+                    item: result.item || prev.item,
+                    costo: result.costo || prev.costo,
+                    data: result.data || prev.data,
+                }));
+            }
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setIsAnalyzingReceipt(false);
+        }
+    };
+
     const handleAddExpense = async () => {
         if (!newItemExpense.item) return;
-        const data = { ...newItemExpense, costo: Number(newItemExpense.costo) };
+        let data = { ...newItemExpense, costo: Number(newItemExpense.costo) };
+
+        // Exchange Rate Logic
+        if (data.valuta !== "€") {
+            // Try to fetch real-time rate if API key is present
+            const code = getCurrencyCode(data.valuta);
+            const rate = await fetchExchangeRate(code, "EUR");
+            if (rate) {
+                data.costoEUR = data.costo * rate;
+                data.exchangeRateUsed = rate;
+            } else {
+                // Fallback to manual rate if API fails
+                data.costoEUR = data.costo * EXCHANGE_RATE;
+                data.exchangeRateUsed = EXCHANGE_RATE;
+            }
+        } else {
+            // If it's already in Euro
+            data.costoEUR = data.costo;
+            data.exchangeRateUsed = 1;
+        }
+
         if (editingId) await getDBCollection("expenses").doc(editingId).update(data);
         else await getDBCollection("expenses").add(data);
         setActiveModal(null); setEditingId(null); setNewItemExpense({ item: "", costo: "", valuta: tripDetails.currencySymbol || "£", pagato: false, prenotato: false, chi: "", note: "" });
@@ -187,20 +384,29 @@ const TripDashboard = () => {
     };
 
     // Debt Calculation
+    // Debt Calculation
     const calculateDebts = () => {
         const participants = tripDetails.participants || ["Andrea Inardi"];
         const participantCount = participants.length;
 
-        // Calculate total paid by each person (in EUR)
+        // Calculate total paid by each person (in EUR) - EXCLUDING Settlements
         const paidByPerson = {};
         participants.forEach(p => paidByPerson[p] = 0);
 
         // Sum expenses for each person who paid
         expenses.forEach(expense => {
+            // Skip settlements for total calculation
+            if (expense.type === 'settlement') return;
+
             if (expense.pagato && expense.chi) {
-                const amountInEUR = expense.valuta === "€"
-                    ? expense.costo
-                    : expense.costo * EXCHANGE_RATE;
+                let amountInEUR = 0;
+                if (expense.costoEUR !== undefined) {
+                    amountInEUR = expense.costoEUR;
+                } else {
+                    amountInEUR = expense.valuta === "€"
+                        ? expense.costo
+                        : expense.costo * EXCHANGE_RATE;
+                }
                 paidByPerson[expense.chi] = (paidByPerson[expense.chi] || 0) + amountInEUR;
             }
         });
@@ -222,6 +428,24 @@ const TripDashboard = () => {
         const balances = {};
         participants.forEach(p => {
             balances[p] = (paidByPerson[p] || 0) - fairShare;
+        });
+
+        // APPLY SETTLEMENTS
+        expenses.forEach(expense => {
+            if (expense.type === 'settlement' && expense.chi && expense.to) {
+                let amountInEUR = 0;
+                if (expense.costoEUR !== undefined) {
+                    amountInEUR = expense.costoEUR;
+                } else {
+                    amountInEUR = expense.valuta === "€" ? expense.costo : expense.costo * EXCHANGE_RATE;
+                }
+
+                // 'chi' (Payer) paid 'to' (Receiver).
+                // Payer gave money, so their balance should INCREASE (they are owed more/owe less)
+                balances[expense.chi] += amountInEUR;
+                // Receiver got money, so their balance should DECREASE (they are owed less/owe more)
+                balances[expense.to] -= amountInEUR;
+            }
         });
 
         // Calculate debts (who owes whom)
@@ -255,6 +479,32 @@ const TripDashboard = () => {
         setActiveModal('debts');
     };
 
+    // Auto-update debts when underlying data changes while modal is open
+    useEffect(() => {
+        if (activeModal === 'debts') {
+            setDebtsData(calculateDebts());
+        }
+    }, [expenses, transport, activeModal]);
+
+    const handleSettleDebt = async (debt) => {
+        requestConfirm("Salda Debito", `Confermi di aver saldato €${debt.amount.toFixed(2)} a ${debt.to}?`, async () => {
+            await getDBCollection("expenses").add({
+                item: "Saldato debito",
+                chi: debt.from, // Payer
+                to: debt.to,    // Receiver
+                costo: debt.amount,
+                valuta: "€",
+                pagato: true,
+                prenotato: false,
+                type: "settlement",
+                note: "Saldato tramite app",
+                date: new Date().toISOString()
+            });
+            // Force recalculate (will happen auto via listener, but good to be sure logic follows)
+            // The listener on expenses will trigger re-render
+        });
+    };
+
     // Derived State
     const TRIP_CURRENCY = tripDetails.currencySymbol || "£";
     const EXCHANGE_RATE = parseFloat(tripDetails.exchangeRate) || 1.15;
@@ -264,13 +514,45 @@ const TripDashboard = () => {
         const amount = parseFloat(costStr.replace(/[^0-9.]/g, "")) || 0;
         return { amount, currency };
     };
-    const paidEUR = expenses.filter(e => e.valuta === "€" && e.pagato).reduce((acc, curr) => acc + Number(curr.costo), 0)
+    const paidEUR = expenses.filter(e => e.valuta === "€" && e.pagato).reduce((acc, curr) => acc + (curr.costoEUR !== undefined ? curr.costoEUR : Number(curr.costo)), 0)
         + transport.filter(t => t.pagato).reduce((acc, curr) => { const { amount, currency } = parseCost(curr.costo); return currency === "€" ? acc + amount : acc; }, 0);
-    const paidForeign = expenses.filter(e => e.valuta === TRIP_CURRENCY && e.pagato).reduce((acc, curr) => acc + Number(curr.costo), 0)
-        + transport.filter(t => t.pagato).reduce((acc, curr) => { const { amount, currency } = parseCost(curr.costo); return currency === TRIP_CURRENCY ? acc + amount : acc; }, 0);
-    const totalPaidEUR = paidEUR + (paidForeign * EXCHANGE_RATE);
-    const toPayForeign = expenses.filter(e => e.valuta === TRIP_CURRENCY && !e.pagato).reduce((acc, curr) => acc + Number(curr.costo), 0)
-        + transport.filter(t => !t.pagato).reduce((acc, curr) => { const { amount, currency } = parseCost(curr.costo); return currency === TRIP_CURRENCY ? acc + amount : acc; }, 0);
+
+    // For paid foreign, we now just sum costoEUR of non-euro expenses
+    // BUT checking for valuta !== "€" is safer than checking currencySymbol because user might have mixed currencies
+    const paidForeignConverted = expenses.filter(e => e.valuta !== "€" && e.pagato).reduce((acc, curr) => acc + (curr.costoEUR !== undefined ? curr.costoEUR : Number(curr.costo) * EXCHANGE_RATE), 0);
+    const paidForeignOnlyTransport = transport.filter(t => t.pagato).reduce((acc, curr) => { const { amount, currency } = parseCost(curr.costo); return currency !== "€" ? acc + (amount * EXCHANGE_RATE) : acc; }, 0);
+
+    const totalPaidEUR = paidEUR + paidForeignConverted + paidForeignOnlyTransport; // Wait, paidEUR already includes expenses with valuta="€"
+
+    // Refined logic:
+    // 1. Sum ALL expenses in EUR
+    const totalExpensesEUR = expenses.filter(e => e.pagato).reduce((acc, curr) => {
+        if (curr.costoEUR !== undefined) return acc + curr.costoEUR;
+        return acc + (curr.valuta === "€" ? curr.costo : curr.costo * EXCHANGE_RATE);
+    }, 0);
+
+    // 2. Sum ALL transport in EUR
+    const totalTransportEUR = transport.filter(t => t.pagato).reduce((acc, curr) => {
+        const { amount, currency } = parseCost(curr.costo);
+        return acc + (currency === "€" ? amount : amount * EXCHANGE_RATE);
+    }, 0);
+
+    const totalPaidFinal = totalExpensesEUR + totalTransportEUR;
+
+    // 3. To Pay (Foreign + Euro mixed, but simplified for display to just show "Foreign" equivalent is tricky if we have multiple)
+    // The original code tried to show "Previsto" in Pounds.
+    // If we have mixed currencies, showing a single "Previsto" in Pounds is approximations.
+    // Let's keep the logic but use costoEUR for value accuracy if needed, or just sum raw for display if it matches TRIP_CURRENCY.
+
+    const toPayForeign = expenses.filter(e => !e.pagato).reduce((acc, curr) => {
+        // Only sum if it matches the main trip currency, otherwise it gets confusing
+        if (curr.valuta === TRIP_CURRENCY) return acc + Number(curr.costo);
+        return acc;
+    }, 0) + transport.filter(t => !t.pagato).reduce((acc, curr) => { const { amount, currency } = parseCost(curr.costo); return currency === TRIP_CURRENCY ? acc + amount : acc; }, 0);
+
+    // Override the previous variables for display
+    // const totalPaidEUR ... used in display -> Replace with totalPaidFinal
+
 
     const participantCount = tripDetails.participants?.length || 2;
 
@@ -531,6 +813,12 @@ const TripDashboard = () => {
                                                             <div>
                                                                 <h3 className="title-medium font-bold text-[var(--md-sys-color-on-surface)]">{t.dettaglio}</h3>
                                                                 <span className="label-small text-[var(--md-sys-color-on-surface-variant)] uppercase tracking-wider">{t.data} • {t.ora}</span>
+                                                                {(t.terminal || t.gate) && (
+                                                                    <div className="flex gap-2 mt-1">
+                                                                        {t.terminal && <span className="text-[10px] font-bold bg-[var(--md-sys-color-surface-variant)] px-1.5 py-0.5 rounded text-[var(--md-sys-color-on-surface-variant)]">T{t.terminal}</span>}
+                                                                        {t.gate && <span className="text-[10px] font-bold bg-[var(--md-sys-color-surface-variant)] px-1.5 py-0.5 rounded text-[var(--md-sys-color-on-surface-variant)]">GATE {t.gate}</span>}
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         </div>
                                                         <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
@@ -583,8 +871,8 @@ const TripDashboard = () => {
                                             <Check size={18} strokeWidth={3} className={themeMode === 'dark' ? 'text-green-200' : 'text-[#0A5C1F]'} />
                                         </div>
                                         <span className="label-medium font-bold uppercase tracking-wider opacity-80">Già Pagato</span>
-                                        <span className="display-small font-black tracking-tight">€{Math.round(totalPaidEUR)}</span>
-                                        <span className={`label-small font-semibold opacity-70 px-2 py-0.5 rounded-full ${themeMode === 'dark' ? 'bg-green-800/40' : 'bg-[#0A5C1F]/10'}`}>€{(totalPaidEUR / participantCount).toFixed(0)} /testa</span>
+                                        <span className="display-small font-black tracking-tight">€{totalPaidFinal.toFixed(2)}</span>
+                                        <span className={`label-small font-semibold opacity-70 px-2 py-0.5 rounded-full ${themeMode === 'dark' ? 'bg-green-800/40' : 'bg-[#0A5C1F]/10'}`}>€{(totalPaidFinal / participantCount).toFixed(2)} /testa</span>
                                     </div>
                                     {/* PREVISTO - Right rounded shape */}
                                     <div className={`payment-card payment-card-due relative overflow-hidden p-5 rounded-r-[32px] rounded-l-[12px] flex flex-col items-end gap-2 shadow-lg border-2 ${themeMode === 'dark' ? 'bg-red-900 border-red-700 text-red-100' : 'bg-gradient-to-bl from-[#FECACA] via-[#FFD9D9] to-[#FFE8E8] border-[#FCA5A5]/50 text-[#991B1B]'}`}>
@@ -920,9 +1208,24 @@ const TripDashboard = () => {
                     <Button onClick={handleAddItinerary} className="mt-4">{editingId ? "Salva Modifiche" : "Aggiungi"}</Button>
                 </Modal >
                 <Modal isOpen={activeModal === 'transport'} onClose={() => setActiveModal(null)} title="Spostamento">
-                    <InputGroup label="Mezzo"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemTransport.dettaglio} onChange={e => setNewItemTransport({ ...newItemTransport, dettaglio: e.target.value })} /></InputGroup>
+                    <InputGroup label="Mezzo">
+                        <div className="flex gap-2">
+                            <input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemTransport.dettaglio} onChange={e => setNewItemTransport({ ...newItemTransport, dettaglio: e.target.value })} placeholder="Es. Volo AZ203, Treno..." />
+                            <button onClick={() => fetchFlightDetails(newItemTransport.dettaglio)} className="bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] rounded-xl px-3 font-bold flex items-center justify-center shadow-sm active:scale-95 transition-all" title="Traccia Volo (Amadeus)">
+                                <Plane size={20} />
+                            </button>
+                        </div>
+                    </InputGroup>
                     <div className="grid grid-cols-2 gap-3"><InputGroup label="Partenza"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemTransport.partenza} onChange={e => setNewItemTransport({ ...newItemTransport, partenza: e.target.value })} /></InputGroup><InputGroup label="Arrivo"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemTransport.arrivo} onChange={e => setNewItemTransport({ ...newItemTransport, arrivo: e.target.value })} /></InputGroup></div>
                     <div className="grid grid-cols-2 gap-3"><InputGroup label="Data"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemTransport.data} onChange={e => setNewItemTransport({ ...newItemTransport, data: e.target.value })} /></InputGroup><InputGroup label="Ora"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemTransport.ora} onChange={e => setNewItemTransport({ ...newItemTransport, ora: e.target.value })} /></InputGroup></div>
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                        <InputGroup label="Terminal">
+                            <input type="text" placeholder="T1" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-sm text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemTransport.terminal || ""} onChange={e => setNewItemTransport({ ...newItemTransport, terminal: e.target.value })} />
+                        </InputGroup>
+                        <InputGroup label="Gate">
+                            <input type="text" placeholder="A10" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-sm text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemTransport.gate || ""} onChange={e => setNewItemTransport({ ...newItemTransport, gate: e.target.value })} />
+                        </InputGroup>
+                    </div>
                     <InputGroup label="Costo"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemTransport.costo} onChange={e => setNewItemTransport({ ...newItemTransport, costo: e.target.value })} /></InputGroup>
 
                     <div className="mt-4 p-4 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)]">
@@ -952,12 +1255,36 @@ const TripDashboard = () => {
                 </Modal>
                 <Modal isOpen={activeModal === 'expenses'} onClose={() => { setActiveModal(null); setEditingId(null); }} title={editingId ? "Modifica Spesa" : "Nuova Spesa"}>
                     <InputGroup label="Oggetto">
+                        <div className="flex gap-2">
+                            <input
+                                type="text"
+                                placeholder="Es. Cena"
+                                className="flex-1 p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)] min-w-0"
+                                value={newItemExpense.item}
+                                onChange={e => setNewItemExpense({ ...newItemExpense, item: e.target.value })}
+                            />
+                            {/* Camera Button */}
+                            <button
+                                onClick={() => setShowCamera(true)}
+                                disabled={isAnalyzingReceipt}
+                                className={`flex items-center justify-center w-12 rounded-xl border border-[var(--md-sys-color-outline-variant)] transition-all ${isAnalyzingReceipt ? 'bg-amber-100 text-amber-600 animate-pulse' : 'bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] hover:bg-[var(--md-sys-color-secondary-container)] hover:text-[var(--md-sys-color-on-secondary-container)]'}`}
+                                title="Scatta Foto"
+                            >
+                                {isAnalyzingReceipt ? <RefreshCw size={20} className="animate-spin" /> : <Camera size={20} />}
+                            </button>
+                            {/* Upload Button */}
+                            <label className={`flex items-center justify-center w-12 rounded-xl border border-[var(--md-sys-color-outline-variant)] cursor-pointer transition-all ${isAnalyzingReceipt ? 'opacity-50 pointer-events-none' : 'bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] hover:bg-[var(--md-sys-color-secondary-container)] hover:text-[var(--md-sys-color-on-secondary-container)]'}`} title="Carica da Galleria">
+                                <Image size={20} />
+                                <input type="file" accept="image/*" className="hidden" onChange={(e) => processReceiptFile(e.target.files[0])} disabled={isAnalyzingReceipt} />
+                            </label>
+                        </div>
+                    </InputGroup>
+                    <InputGroup label="Data">
                         <input
-                            type="text"
-                            placeholder="Es. Cena"
-                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
-                            value={newItemExpense.item}
-                            onChange={e => setNewItemExpense({ ...newItemExpense, item: e.target.value })}
+                            type="date"
+                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)]"
+                            value={newItemExpense.data || new Date().toISOString().split('T')[0]}
+                            onChange={e => setNewItemExpense({ ...newItemExpense, data: e.target.value })}
                         />
                     </InputGroup>
                     <div className="grid grid-cols-2 gap-3">
@@ -1360,9 +1687,16 @@ const TripDashboard = () => {
                                                 </div>
 
                                                 {/* Amount - Big and Clear */}
-                                                <div className="text-center bg-[var(--md-sys-color-surface)] rounded-[20px] p-4">
+                                                <div className="text-center bg-[var(--md-sys-color-surface)] rounded-[20px] p-4 mb-3">
                                                     <div className="display-large font-black text-[var(--md-sys-color-primary)]">€{debt.amount.toFixed(2)}</div>
                                                 </div>
+
+                                                <button
+                                                    onClick={() => handleSettleDebt(debt)}
+                                                    className="w-full py-3 bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] rounded-xl font-bold flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all"
+                                                >
+                                                    <Check size={20} /> Salda Debito
+                                                </button>
                                             </div>
                                         ))}
                                     </div>
@@ -1496,6 +1830,16 @@ const TripDashboard = () => {
                     </div>
                 )
             }
+
+            {showCamera && (
+                <CameraCapture
+                    onCapture={(file) => {
+                        setShowCamera(false);
+                        processReceiptFile(file);
+                    }}
+                    onClose={() => setShowCamera(false)}
+                />
+            )}
         </>
     );
 };
