@@ -1,8 +1,8 @@
 const { useState, useEffect } = React;
-const BackpackTab = ({ tripId, participants }) => {
+const BackpackTab = ({ tripId, participants, weatherData, tripDetails }) => {
     const {
         User, CheckCircle, MapPin, Backpack, Search, Badge,
-        Plus, Minus, Edit, Trash, Button, Modal, InputGroup, SegmentedControl
+        Plus, Minus, Edit, Trash, Button, Modal, InputGroup, SegmentedControl, Sparkles
     } = window;
 
     const owners = (participants && participants.length > 0) ? participants : ["Andrea Inardi", "Elena Cafasso"];
@@ -26,6 +26,54 @@ const BackpackTab = ({ tripId, participants }) => {
         });
         return () => unsubBackpack();
     }, [tripId]);
+
+    const [suggestions, setSuggestions] = useState([]);
+    const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+    useEffect(() => {
+        const fetchSuggestions = async () => {
+            if (weatherData && window.GeminiService && tripDetails) {
+                setIsLoadingSuggestions(true);
+                try {
+                    // Start with basic weather suggestions as fallback/initial
+                    let allSuggestions = [];
+                    if (window.WeatherService) {
+                        allSuggestions = window.WeatherService.getPackingSuggestions(weatherData);
+                    }
+
+                    // Try to get AI suggestions
+                    const aiSuggestions = await window.GeminiService.getBackpackSuggestions(weatherData, tripDetails);
+                    if (aiSuggestions && aiSuggestions.length > 0) {
+                        allSuggestions = aiSuggestions;
+                    }
+
+                    const currentItems = backpack.map(b => b.item.toLowerCase());
+                    const filtered = allSuggestions.filter(s => !currentItems.some(existing => existing.includes(s.item.toLowerCase())));
+                    setSuggestions(filtered);
+                } catch (e) {
+                    console.error("Error fetching suggestions", e);
+                } finally {
+                    setIsLoadingSuggestions(false);
+                }
+            }
+        };
+        fetchSuggestions();
+    }, [weatherData, backpack, tripDetails]);
+
+    const handleAddSuggestion = async (suggestion) => {
+        await getDBCollection("backpack").add({
+            item: suggestion.item,
+            categoria: suggestion.category || "Altro",
+            packed: false,
+            qty: 1,
+            ml: suggestion.ml || 0,
+            outside: false,
+            owner: backpackOwnerFilter, // Add to current view owner
+            collocazione: "",
+            autoSuggested: true
+        });
+        // Remove from local suggestions to update UI immediately (though effect will verify)
+        setSuggestions(prev => prev.filter(s => s.item !== suggestion.item));
+    };
 
     const handleAddBackpackItem = async () => {
         if (!newItemBackpack.item) return;
@@ -82,6 +130,37 @@ const BackpackTab = ({ tripId, participants }) => {
     return (
         <div className="space-y-6">
             <div className="p-1 mb-4 space-y-3">
+
+                {/* Weather Suggestions - Material 3 Expressive */}
+                {isLoadingSuggestions ? (
+                    <div className="flex items-center gap-2 overflow-x-auto scroller no-scrollbar pb-2 pt-1 px-1">
+                        <div className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] animate-pulse">
+                            <span className="text-sm opacity-50">✨</span>
+                        </div>
+                        <div className="flex-shrink-0 w-24 h-8 rounded-full bg-[var(--md-sys-color-surface-container-high)] animate-pulse"></div>
+                        <div className="flex-shrink-0 w-24 h-8 rounded-full bg-[var(--md-sys-color-surface-container-high)] animate-pulse"></div>
+                        <div className="flex-shrink-0 w-24 h-8 rounded-full bg-[var(--md-sys-color-surface-container-high)] animate-pulse"></div>
+                    </div>
+                ) : suggestions.length > 0 && (
+                    <div className="flex items-center gap-2 overflow-x-auto scroller no-scrollbar pb-2 pt-1 px-1">
+                        <div className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 shadow-sm border border-indigo-200 dark:border-indigo-700">
+                            <Sparkles size={16} />
+                        </div>
+                        {suggestions.map((s, idx) => (
+                            <button
+                                key={idx}
+                                onClick={() => handleAddSuggestion(s)}
+                                className="flex-shrink-0 flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 pl-3 pr-4 py-2 rounded-[12px] border border-indigo-200 dark:border-indigo-700/50 shadow-sm hover:shadow-md active:scale-95 transition-all text-xs group"
+                                title={s.reason}
+                            >
+                                <span className="text-sm group-hover:scale-110 transition-transform">{s.icon}</span>
+                                <span className="font-bold text-indigo-900 dark:text-indigo-200 group-hover:text-indigo-950 dark:group-hover:text-indigo-100 transition-colors">{s.item}</span>
+                                <Plus size={10} className="text-indigo-500 dark:text-indigo-400 ml-1 opacity-70 group-hover:opacity-100" />
+                            </button>
+                        ))}
+                    </div>
+                )}
+
                 <div className="flex flex-col gap-3">
                     {/* Owner & Status Toggles with Sliding Pill Animation */}
                     <div className="flex flex-col gap-3">
@@ -205,8 +284,8 @@ const BackpackTab = ({ tripId, participants }) => {
                     if (filteredBackpack.length === 0 && backpack.filter(i => i.owner === backpackOwnerFilter).length > 0) {
                         return (
                             <div className="text-center py-10 opacity-50">
-                                <Search size={48} className="mx-auto mb-2 text-gray-300" />
-                                <p className="text-gray-400 text-sm">Nessun oggetto trovato con questi filtri</p>
+                                <Search size={48} className="mx-auto mb-2 text-[var(--md-sys-color-outline-variant)] opacity-50" />
+                                <p className="text-[var(--md-sys-color-on-surface-variant)] text-sm opacity-70">Nessun oggetto trovato con questi filtri</p>
                             </div>
                         );
                     }
@@ -220,9 +299,9 @@ const BackpackTab = ({ tripId, participants }) => {
                                 {filteredBackpack.filter(i => i.categoria === cat).map(item => (
                                     <div key={item.id} className={`p-4 rounded-[20px] flex items-center gap-3 transition-colors group ${item.packed ? 'bg-[#E6F4EA] shadow-none opacity-80' : 'bg-[var(--md-sys-color-surface-container-low)] shadow-sm'}`}>
                                         <div className="flex flex-col items-center gap-1 bg-[var(--md-sys-color-surface)] rounded-xl p-1 min-w-[32px]">
-                                            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateBackpackQty(item.id, item.qty || 1, 1) }} className="p-1 hover:bg-gray-100 rounded text-[var(--md-sys-color-primary)] font-bold leading-none"><Plus size={12} /></button>
+                                            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateBackpackQty(item.id, item.qty || 1, 1) }} className="p-1 hover:bg-[var(--md-sys-color-surface-variant)] rounded text-[var(--md-sys-color-primary)] font-bold leading-none"><Plus size={12} /></button>
                                             <span className="text-sm font-bold text-[var(--md-sys-color-on-surface)] text-center select-none">{item.qty || 1}</span>
-                                            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateBackpackQty(item.id, item.qty || 1, -1) }} className="p-1 hover:bg-gray-100 rounded text-[var(--md-sys-color-primary)] font-bold leading-none"><Minus size={12} /></button>
+                                            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateBackpackQty(item.id, item.qty || 1, -1) }} className="p-1 hover:bg-[var(--md-sys-color-surface-variant)] rounded text-[var(--md-sys-color-primary)] font-bold leading-none"><Minus size={12} /></button>
                                         </div>
 
                                         <div className="flex-1 min-w-0" onClick={() => togglePacked(item.id, item.packed)}>
@@ -265,8 +344,8 @@ const BackpackTab = ({ tripId, participants }) => {
 
                 {backpack.filter(i => i.owner === backpackOwnerFilter).length === 0 && (
                     <div className="text-center py-10 opacity-50">
-                        <Backpack size={48} className="mx-auto mb-2 text-gray-300" />
-                        <p className="text-gray-400 text-sm">Zaino vuoto</p>
+                        <Backpack size={48} className="mx-auto mb-2 text-[var(--md-sys-color-outline-variant)] opacity-50" />
+                        <p className="text-[var(--md-sys-color-on-surface-variant)] text-sm opacity-70">Zaino vuoto</p>
                     </div>
                 )}
             </div>

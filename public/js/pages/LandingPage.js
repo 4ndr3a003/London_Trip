@@ -143,7 +143,7 @@ const LandingPage = () => {
                     <img src="img/icon-192.png" alt="App Icon" className="w-12 h-12 rounded-[16px] shadow-sm" />
                     <ThemeToggle mode={themeMode} onToggle={toggleTheme} />
                 </div>
-                <h1 className="display-large leading-tight text-[var(--md-sys-color-on-surface)]">
+                <h1 className="display-large leading-none text-[var(--md-sys-color-on-surface)] font-black text-7xl tracking-tighter" style={{ fontFamily: 'var(--font-display)' }}>
                     Trip<br />Planner
                 </h1>
             </header>

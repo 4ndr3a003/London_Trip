@@ -232,6 +232,8 @@ function applyTheme(seedColor, mode = 'light') {
     const scheme = generateM3Scheme(seedColor);
     const tokens = scheme[mode] || scheme.light;
     const root = document.documentElement;
+    if (mode === 'dark') root.classList.add('dark');
+    else root.classList.remove('dark');
 
     // Map token names to CSS variable names
     const tokenToCss = {

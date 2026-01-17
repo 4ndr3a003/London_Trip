@@ -63,6 +63,28 @@ const TripDashboard = () => {
     const [newItemItinerary, setNewItemItinerary] = useState({ nome: "", categoria: "Museo", quartiere: "", durata: "", orari: "", eccezioni: "", img: "", mapEmbed: "" });
     const [newItemDay, setNewItemDay] = useState({ data: "" });
     const [newItemEvent, setNewItemEvent] = useState({ type: 'attraction', attractionId: "", customTitle: "", time: "", notes: "" });
+    const [weatherData, setWeatherData] = useState(null);
+
+    // Weather Fetcher
+    useEffect(() => {
+        const fetchWeather = async () => {
+            console.log("TripDashboard: Checking WeatherService...", window.WeatherService);
+            if (window.WeatherService) {
+                // Now supports dynamic city resolution from Title
+                const cityQuery = tripDetails?.title || "London";
+                console.log("TripDashboard: Fetching weather for:", cityQuery);
+
+                // Pass null for lat/lon to force geocoding from title
+                const data = await window.WeatherService.fetchWeather(null, null, cityQuery);
+
+                console.log("TripDashboard: Weather data received:", data);
+                if (data) setWeatherData(data);
+            } else {
+                console.error("TripDashboard: WeatherService NOT found on window.");
+            }
+        };
+        fetchWeather();
+    }, []);
     const [newItemTransport, setNewItemTransport] = useState({ dettaglio: "", partenza: "", arrivo: "", data: "", ora: "", costo: "", pagato: false, prenotato: false, ticket: "", terminal: "", gate: "" });
     const [newItemExpense, setNewItemExpense] = useState({ item: "", costo: "", valuta: "£", pagato: false, prenotato: false, chi: "", note: "", data: new Date().toISOString().split('T')[0] });
     const [isAnalyzingReceipt, setIsAnalyzingReceipt] = useState(false);
@@ -297,7 +319,7 @@ const TripDashboard = () => {
 
         setIsAnalyzingReceipt(true);
         try {
-            const result = await window.GeminiScanner.scanReceipt(file);
+            const result = await window.GeminiService.scanReceipt(file);
             if (result) {
                 setNewItemExpense(prev => ({
                     ...prev,
@@ -629,10 +651,31 @@ const TripDashboard = () => {
                         {/* Right: Trip Info */}
                         <div className="flex flex-col items-end text-right cursor-pointer" onClick={() => { setNewItemTripDetails(tripDetails); setActiveModal('tripDetails'); }}>
                             <span className="text-4xl hover:scale-110 transition-transform mb-1">{tripDetails.flag}</span>
-                            <h1 className="headline-large leading-tight text-[var(--md-sys-color-primary)] font-bold">
+                            <span className="label-small uppercase tracking-[0.2em] text-[var(--md-sys-color-on-primary-container)] opacity-60 mt-2 text-[10px] font-bold">{tripDetails.dates}</span>
+                            <h1 className="display-large leading-none text-[var(--md-sys-color-primary)] font-black text-6xl tracking-tighter shadow-sm">
                                 {tripDetails.title}
                             </h1>
-                            <span className="label-large uppercase tracking-widest text-[var(--md-sys-color-on-primary-container)] opacity-70 mt-1">{tripDetails.dates}</span>
+
+                            {/* Weather Dashboard Widget */}
+                            {/* Weather Dashboard Widget - Clean & Readable */}
+                            {weatherData && (
+                                <div className="mt-2 flex items-center justify-end gap-5">
+                                    {weatherData.error ? (
+                                        <div className="flex items-center gap-2 text-[var(--md-sys-color-error)] bg-[var(--md-sys-color-error-container)] px-3 py-1 rounded-full shadow-sm animate-pulse">
+                                            <AlertCircle size={18} />
+                                            <span className="text-sm font-bold">{weatherData.message}</span>
+                                        </div>
+                                    ) : (
+                                        window.WeatherService.getForecastSummary(weatherData) && window.WeatherService.getForecastSummary(weatherData).map((day, idx) => (
+                                            <div key={idx} className="flex flex-col items-center gap-0.5">
+                                                <span className="text-xs font-bold text-[var(--md-sys-color-on-primary-container)] uppercase tracking-wider">{day.date}</span>
+                                                <img src={day.icon} className="w-10 h-10 -my-1 filter drop-shadow-sm transform hover:scale-110 transition-transform" alt={day.description} title={day.description} />
+                                                <span className="text-sm font-black text-[var(--md-sys-color-on-primary-container)]">{day.tempMax}°</span>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </header>
@@ -1103,7 +1146,7 @@ const TripDashboard = () => {
                                 })}
                             </div>
                         )}
-                        {activeTab === "backpack" && <BackpackTab tripId={tripId} participants={tripDetails.participants} />}
+                        {activeTab === "backpack" && <BackpackTab tripId={tripId} tripDetails={tripDetails} participants={tripDetails.participants} weatherData={weatherData} />}
                         {activeTab === "documents" && <DocumentsTab tripId={tripId} tripDetails={tripDetails} />}
                     </div>
 

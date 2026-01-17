@@ -18,3 +18,7 @@ window.AMADEUS_CLIENT_SECRET = "";
 // --- GEMINI AI API ---
 // Get your key at https://makersuite.google.com/app/apikey
 window.GEMINI_API_KEY = "";
+
+// --- OPEN WEATHER MAP API ---
+// Get your key at https://home.openweathermap.org/api_keys
+window.OPEN_WEATHER_API_KEY = "263656f432dd906cc9e34694f655a98f";
