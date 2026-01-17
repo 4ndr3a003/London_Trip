@@ -23,20 +23,20 @@ const LandingPage = () => {
 
     // Colors Palette
     const colors = [
-        { hex: "#000000", name: "Nero" },
         { hex: "#dc2626", name: "Rosso" },
-        { hex: "#2563eb", name: "Blu" },
-        { hex: "#16a34a", name: "Verde" },
         { hex: "#d97706", name: "Arancione" },
+        { hex: "#EAB308", name: "Giallo" },
+        { hex: "#84CC16", name: "Lime" },
+        { hex: "#16a34a", name: "Verde" },
+        { hex: "#0D9488", name: "Ottanio" },
+        { hex: "#0891b2", name: "Ciano" },
+        { hex: "#2563eb", name: "Blu" },
+        { hex: "#4F46E5", name: "Indaco" },
         { hex: "#9333ea", name: "Viola" },
         { hex: "#db2777", name: "Rosa" },
-        { hex: "#0891b2", name: "Ciano" },
-        { hex: "#EAB308", name: "Giallo" },
-        { hex: "#4F46E5", name: "Indaco" },
-        { hex: "#84CC16", name: "Lime" },
-        { hex: "#0D9488", name: "Ottanio" },
+        { hex: "#795548", name: "Marrone" },
         { hex: "#64748B", name: "Grigio Blu" },
-        { hex: "#795548", name: "Marrone" }
+        { hex: "#000000", name: "Nero" }
     ];
 
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: "", message: "", onConfirm: null });

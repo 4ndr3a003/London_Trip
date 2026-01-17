@@ -581,20 +581,20 @@ const TripDashboard = () => {
     }, [expenses, filterStatusExpenses, sortOrder]);
 
     const colors = [
-        { hex: "#000000", name: "Nero" },
         { hex: "#dc2626", name: "Rosso" },
-        { hex: "#2563eb", name: "Blu" },
-        { hex: "#16a34a", name: "Verde" },
         { hex: "#d97706", name: "Arancione" },
+        { hex: "#EAB308", name: "Giallo" },
+        { hex: "#84CC16", name: "Lime" },
+        { hex: "#16a34a", name: "Verde" },
+        { hex: "#0D9488", name: "Ottanio" },
+        { hex: "#0891b2", name: "Ciano" },
+        { hex: "#2563eb", name: "Blu" },
+        { hex: "#4F46E5", name: "Indaco" },
         { hex: "#9333ea", name: "Viola" },
         { hex: "#db2777", name: "Rosa" },
-        { hex: "#0891b2", name: "Ciano" },
-        { hex: "#EAB308", name: "Giallo" },
-        { hex: "#4F46E5", name: "Indaco" },
-        { hex: "#84CC16", name: "Lime" },
-        { hex: "#0D9488", name: "Ottanio" },
+        { hex: "#795548", name: "Marrone" },
         { hex: "#64748B", name: "Grigio Blu" },
-        { hex: "#795548", name: "Marrone" }
+        { hex: "#000000", name: "Nero" }
     ];
 
     const getTransportIcon = (name) => {
@@ -1114,7 +1114,6 @@ const TripDashboard = () => {
                         onScan={(data) => {
                             setNewItemTransport(prev => ({ ...prev, ticket: data }));
                             setIsScanning(false);
-                            // Optional: Show success toast
                         }}
                         onClose={() => setIsScanning(false)}
                     />
@@ -1235,18 +1234,25 @@ const TripDashboard = () => {
                         </div>
 
                         {newItemTransport.ticket ? (
-                            <div className="flex gap-2">
-                                <div className="flex-1 p-3 bg-white rounded-lg border border-gray-200 text-xs text-gray-500 font-mono truncate">
-                                    {newItemTransport.ticket}
-                                </div>
+                            <div className="flex gap-2 items-center">
+                                {newItemTransport.ticket.startsWith('data:image') || newItemTransport.ticket.startsWith('http') ? (
+                                    <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden border border-gray-300">
+                                        <img src={newItemTransport.ticket} className="w-full h-full object-cover" />
+                                    </div>
+                                ) : (
+                                    <div className="flex-1 p-3 bg-white rounded-lg border border-gray-200 text-xs text-gray-500 font-mono truncate">
+                                        {newItemTransport.ticket}
+                                    </div>
+                                )}
+                                <div className="flex-1 text-xs text-gray-500 font-medium">Biglietto Caricato</div>
                                 <button onClick={() => setNewItemTransport({ ...newItemTransport, ticket: "" })} className="p-3 bg-red-100 text-red-700 rounded-lg hover:bg-red-200">
                                     <Trash size={18} />
                                 </button>
                             </div>
                         ) : (
                             <button onClick={() => setIsScanning(true)} className="w-full py-3 bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] rounded-lg font-bold flex items-center justify-center gap-2 hover:shadow-md transition-all">
-                                <QrCode size={20} />
-                                Scansiona QR Biglietto
+                                <Image size={20} />
+                                Carica Immagine Biglietto
                             </button>
                         )}
                     </div>
@@ -1688,7 +1694,7 @@ const TripDashboard = () => {
 
                                                 {/* Amount - Big and Clear */}
                                                 <div className="text-center bg-[var(--md-sys-color-surface)] rounded-[20px] p-4 mb-3">
-                                                    <div className="display-large font-black text-[var(--md-sys-color-primary)]">€{debt.amount.toFixed(2)}</div>
+                                                    <div className="display-large debt-amount-display font-black text-[var(--md-sys-color-primary)]">€{debt.amount.toFixed(2)}</div>
                                                 </div>
 
                                                 <button

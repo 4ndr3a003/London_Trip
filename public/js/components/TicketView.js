@@ -76,12 +76,20 @@ const TicketView = ({ ticketData, transportItem, onClose }) => {
                     <div className="w-4 h-8 rounded-l-full bg-black/95"></div>
                 </div>
 
-                {/* QR Section */}
+                {/* Content Section (QR or Image) */}
                 <div className="p-8 flex flex-col items-center justify-center bg-white flex-1 min-h-[300px]">
-                    <div ref={qrRef} className="p-4 bg-white border-2 border-gray-100 rounded-2xl shadow-sm mb-4"></div>
-                    <p className="text-xs text-gray-400 font-mono text-center max-w-[200px] break-all">
-                        {ticketData}
-                    </p>
+                    {ticketData && (ticketData.startsWith('data:image') || ticketData.startsWith('http')) ? (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-50 rounded-2xl overflow-hidden border border-gray-200">
+                            <img src={ticketData} alt="Biglietto" className="max-w-full max-h-[60vh] object-contain" />
+                        </div>
+                    ) : (
+                        <>
+                            <div ref={qrRef} className="p-4 bg-white border-2 border-gray-100 rounded-2xl shadow-sm mb-4"></div>
+                            <p className="text-xs text-gray-400 font-mono text-center max-w-[200px] break-all">
+                                {ticketData}
+                            </p>
+                        </>
+                    )}
                 </div>
 
                 {/* Footer Actions */}
