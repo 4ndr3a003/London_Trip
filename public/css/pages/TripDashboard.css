@@ -897,3 +897,95 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
 }
+/* ======================================== */
+/* Google Places Autocomplete Customization */
+/* ======================================== */
+
+/* Container */
+.pac-container {
+    background-color: var(--md-sys-color-surface-container-high) !important;
+    border: 1px solid var(--md-sys-color-outline-variant) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+    margin-top: 8px !important;
+    z-index: 9999 !important;
+}
+
+/* Items */
+.pac-item {
+    border-top: 1px solid var(--md-sys-color-outline-variant) !important;
+    padding: 12px 16px !important;
+    color: var(--md-sys-color-on-surface) !important;
+    cursor: pointer !important;
+    line-height: normal !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+}
+
+.pac-item:hover, .pac-item-selected {
+    background-color: var(--md-sys-color-primary-container) !important;
+    color: var(--md-sys-color-on-primary-container) !important;
+}
+
+.pac-item:first-child {
+    border-top: none !important;
+    border-top-left-radius: 16px !important;
+    border-top-right-radius: 16px !important;
+}
+
+.pac-item:last-child {
+    border-bottom-left-radius: 16px !important;
+    border-bottom-right-radius: 16px !important;
+}
+
+/* Main Text (Place Name) */
+.pac-item-query {
+    color: var(--md-sys-color-on-surface) !important;
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+}
+
+.pac-item:hover .pac-item-query, .pac-item-selected .pac-item-query {
+    color: var(--md-sys-color-on-primary-container) !important;
+}
+
+/* Secondary Text (Address) */
+.pac-item span {
+    color: var(--md-sys-color-on-surface-variant) !important;
+    font-size: 0.85rem !important;
+}
+
+.pac-item:hover span, .pac-item-selected span {
+    color: var(--md-sys-color-on-primary-container) !important; 
+    opacity: 0.8;
+}
+
+/* Icons - Hide default map marker */
+.pac-icon {
+    display: none !important; 
+}
+
+/* Custom Icon */
+.pac-item::before {
+    content: '';
+    display: block;
+    width: 20px;
+    height: 20px;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'%23e6e1e5\'><path d=\'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z\'/></svg>');
+    background-size: contain;
+    background-repeat: no-repeat;
+    opacity: 0.7;
+    flex-shrink: 0;
+}
+
+/* Invert icon color on light background if variable changes, but for now assuming dark vars */
+/* If the theme is light, we need dark icon */
+@media (prefers-color-scheme: light) {
+    /* If the app uses data-theme or class, media query might not be enough. 
+       Let's use the CSS variable for on-surface to determine filter? 
+       No, CSS doesn't work that way. I'll stick to a neutral icon or rely on the filter.
+    */
+}
+

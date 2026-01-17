@@ -119,6 +119,75 @@ const GeminiService = {
             // Fallback to basic weather service suggestions if AI fails
             return window.WeatherService ? window.WeatherService.getPackingSuggestions(weatherData) : [];
         }
+    },
+    scanTicket: async (base64Data) => {
+        const apiKey = window.GEMINI_API_KEY;
+        if (!apiKey || apiKey.includes("YOUR_")) {
+            alert("Per usare lo scanner biglietti, inserisci la tua API Key di Gemini in Config.js");
+            return null;
+        }
+
+        try {
+            const prompt = `
+            Analizza questa immagine di un biglietto aereo o boarding pass (QR, PDF417 o testo).
+            Estrai i seguenti dati se presenti:
+            1. Compagnia Aerea
+            2. Numero Volo (es. AZ203, FR456)
+            3. Data Partenza (YYYY-MM-DD)
+            4. Orario Partenza (HH:MM)
+            5. Aeroporto Partenza (Codice IATA, es. FCO)
+            6. Aeroporto Arrivo (Codice IATA, es. LHR)
+            7. Terminal
+            8. Gate
+            9. Posto (Seat)
+
+            Rispondi SOLO con un JSON valido:
+            {
+                "flightNumber": "AZ203",
+                "carrier": "ITA Airways",
+                "date": "2026-02-25",
+                "departureTime": "14:30",
+                "origin": "FCO",
+                "destination": "LHR",
+                "terminal": "1",
+                "gate": "B12",
+                "seat": "14A"
+            }
+            Se un campo non è presente, usa null.
+            `;
+
+            const payload = {
+                contents: [{
+                    parts: [
+                        { text: prompt },
+                        { inline_data: { mime_type: "image/jpeg", data: base64Data.split(',').pop() } } // Ensure clean base64
+                    ]
+                }]
+            };
+
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+
+            if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts) {
+                const text = data.candidates[0].content.parts[0].text;
+                // Clean up markdown fences
+                const jsonText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+                return JSON.parse(jsonText);
+            } else {
+                console.error("Gemini Ticket Scan Error", data);
+                if (data.error) alert("Errore Gemini: " + data.error.message);
+                return null;
+            }
+        } catch (error) {
+            console.error("Error scanning ticket:", error);
+            alert("Errore interpretazione biglietto: " + error.message);
+            return null;
+        }
     }
 };
 

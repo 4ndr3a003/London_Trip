@@ -1,6 +1,7 @@
 // Theme utility loaded globally
 
 const TripDashboard = () => {
+    const { useState, useEffect, useRef } = React;
     const { useParams, useNavigate, useLocation } = window.ReactRouterDOM;
     // Lazy access to globals
     const {
@@ -53,6 +54,7 @@ const TripDashboard = () => {
 
     const [activeModal, setActiveModal] = useState(null);
     const [editingId, setEditingId] = useState(null);
+    const itineraryNameInputRef = useRef(null);
     const [viewingItem, setViewingItem] = useState(null);
     const [viewingTicket, setViewingTicket] = useState(null); // Transport object with ticket data
     const [isScanning, setIsScanning] = useState(false);
@@ -259,6 +261,69 @@ const TripDashboard = () => {
         }
     };
 
+
+    // Google Places Autocomplete Effect
+    useEffect(() => {
+        if (activeModal === 'itinerary' && window.GoogleMapsLoader) {
+            window.GoogleMapsLoader.load().then(() => {
+                if (itineraryNameInputRef.current && window.google) {
+                    const autocomplete = new window.google.maps.places.Autocomplete(itineraryNameInputRef.current, {
+                        fields: ["name", "formatted_address", "geometry", "opening_hours", "photos", "rating", "types", "website", "place_id", "url"],
+                        types: ["establishment", "geocode"] // broad search
+                    });
+
+                    autocomplete.addListener("place_changed", () => {
+                        const place = autocomplete.getPlace();
+                        if (!place.name) return;
+
+                        console.log("Selected Place:", place);
+
+                        // Extract Data
+                        const nome = place.name;
+                        const address = place.formatted_address || "";
+                        // Simple logic for Quartiere: take part after first comma or just address
+                        const quartiere = address.split(',')[1]?.trim() || address;
+
+                        let orari = "";
+                        if (place.opening_hours && place.opening_hours.weekday_text) {
+                            orari = place.opening_hours.weekday_text.join('\n');
+                        }
+
+                        let img = "";
+                        if (place.photos && place.photos.length > 0) {
+                            img = place.photos[0].getUrl({ maxWidth: 600 });
+                        }
+
+                        let categoria = "Museo"; // Default
+                        // Simple mapping
+                        const types = place.types || [];
+                        if (types.includes("park")) categoria = "Parco";
+                        else if (types.includes("restaurant") || types.includes("food")) categoria = "Ristorante";
+                        else if (types.includes("store") || types.includes("shopping_mall")) categoria = "Shopping";
+                        else if (types.includes("point_of_interest") || types.includes("tourist_attraction")) categoria = "Attrazione";
+
+                        // Construct Embed URL
+                        let mapEmbed = "";
+                        if (place.place_id && window.GOOGLE_MAPS_API_KEY) {
+                            mapEmbed = `https://www.google.com/maps/embed/v1/place?key=${window.GOOGLE_MAPS_API_KEY}&q=place_id:${place.place_id}`;
+                        } else {
+                            mapEmbed = place.url || "";
+                        }
+
+                        setNewItemItinerary(prev => ({
+                            ...prev,
+                            nome: nome,
+                            quartiere: quartiere,
+                            orari: orari,
+                            img: img || prev.img,
+                            categoria: categoria,
+                            mapEmbed: mapEmbed || prev.mapEmbed
+                        }));
+                    });
+                }
+            }).catch(err => console.error("Maps Load Error", err));
+        }
+    }, [activeModal]);
 
     // Listeners
     useEffect(() => {
@@ -631,57 +696,54 @@ const TripDashboard = () => {
 
     return (
         <>
-            <div className={`dashboard-container page-transition-wrapper ${isExiting ? 'page-exit' : 'page-enter'}`} style={{ background: `linear-gradient(180deg, var(--md-sys-color-primary-container) 0%, var(--md-sys-color-surface) 35%)` }}>
+            <div className={`dashboard-container ${isExiting ? 'page-exit' : 'page-enter'}`} style={{ background: `linear-gradient(180deg, var(--md-sys-color-primary-container) 0%, var(--md-sys-color-surface) 35%)` }}>
                 {/* Expressive Header - Balanced Layout */}
-                <header className="pt-6 pb-4 px-6">
-                    <div className="flex justify-between items-start">
-                        {/* Left: Back Button + Install */}
-                        <div className="flex flex-col items-start gap-2">
-                            <div onClick={onBack} className="w-12 h-12 rounded-full flex items-center justify-center cursor-pointer text-[var(--md-sys-color-primary)] hover:bg-[var(--md-sys-color-primary)]/10 transition-colors active:scale-95">
-                                <ArrowDown size={28} />
+                {/* Balanced Header - Weather Left */}
+                <header className="pt-6 pb-3 px-6">
+                    <div className="flex justify-between items-end">
+                        {/* Left: Back/Theme + Weather */}
+                        <div className="flex flex-col items-start gap-4">
+                            <div className="flex items-center gap-3">
+                                <div onClick={onBack} className="w-11 h-11 rounded-full flex items-center justify-center cursor-pointer text-[var(--md-sys-color-primary)]">                                    <ArrowDown size={26} />
+                                </div>
+                                <ThemeToggle mode={themeMode} onToggle={toggleTheme} />
                             </div>
-                            <ThemeToggle mode={themeMode} onToggle={toggleTheme} />
-                            {deferredPrompt && (
-                                <button onClick={(e) => { e.stopPropagation(); handleInstallClick(); }} className="bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] px-4 py-2 rounded-full font-bold text-sm shadow-lg flex items-center gap-2">
-                                    <Smartphone size={16} /> <span>Installa</span>
-                                </button>
-                            )}
-                        </div>
 
-                        {/* Right: Trip Info */}
-                        <div className="flex flex-col items-end text-right cursor-pointer" onClick={() => { setNewItemTripDetails(tripDetails); setActiveModal('tripDetails'); }}>
-                            <span className="text-4xl hover:scale-110 transition-transform mb-1">{tripDetails.flag}</span>
-                            <span className="label-small uppercase tracking-[0.2em] text-[var(--md-sys-color-on-primary-container)] opacity-60 mt-2 text-[10px] font-bold">{tripDetails.dates}</span>
-                            <h1 className="display-large leading-none text-[var(--md-sys-color-primary)] font-black text-6xl tracking-tighter shadow-sm">
-                                {tripDetails.title}
-                            </h1>
-
-                            {/* Weather Dashboard Widget */}
-                            {/* Weather Dashboard Widget - Clean & Readable */}
+                            {/* Weather Widget - Now on Left */}
                             {weatherData && (
-                                <div className="mt-2 flex items-center justify-end gap-5">
+                                <div className="flex items-center gap-4">
                                     {weatherData.error ? (
-                                        <div className="flex items-center gap-2 text-[var(--md-sys-color-error)] bg-[var(--md-sys-color-error-container)] px-3 py-1 rounded-full shadow-sm animate-pulse">
-                                            <AlertCircle size={18} />
-                                            <span className="text-sm font-bold">{weatherData.message}</span>
+                                        <div className="flex items-center gap-2 text-[var(--md-sys-color-error)] bg-[var(--md-sys-color-error-container)] px-3 py-1 rounded-full text-xs font-bold">
+                                            <AlertCircle size={14} />
+                                            <span>Meteo non disp.</span>
                                         </div>
                                     ) : (
                                         window.WeatherService.getForecastSummary(weatherData) && window.WeatherService.getForecastSummary(weatherData).map((day, idx) => (
                                             <div key={idx} className="flex flex-col items-center gap-0.5">
-                                                <span className="text-xs font-bold text-[var(--md-sys-color-on-primary-container)] uppercase tracking-wider">{day.date}</span>
-                                                <img src={day.icon} className="w-10 h-10 -my-1 filter drop-shadow-sm transform hover:scale-110 transition-transform" alt={day.description} title={day.description} />
-                                                <span className="text-sm font-black text-[var(--md-sys-color-on-primary-container)]">{day.tempMax}°</span>
+                                                <img src={day.icon} className="w-8 h-8 -my-1 filter drop-shadow-md" alt={day.description} />
+                                                <span className="text-xs font-bold text-[var(--md-sys-color-on-primary-container)]">{day.tempMax}°</span>
                                             </div>
                                         ))
                                     )}
                                 </div>
                             )}
                         </div>
+
+                        {/* Right: Trip Info (Title Only) */}
+                        <div className="flex flex-col items-end text-right cursor-pointer pb-1" onClick={() => { setNewItemTripDetails(tripDetails); setActiveModal('tripDetails'); }}>
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs font-bold opacity-70 uppercase tracking-widest text-[var(--md-sys-color-on-primary-container)]">{tripDetails.dates}</span>
+                                <span className="text-3xl leading-none filter drop-shadow-sm transform translate-y-[-2px]">{tripDetails.flag}</span>
+                            </div>
+                            <h1 className="text-5xl font-black tracking-tighter text-[var(--md-sys-color-primary)] leading-none drop-shadow-sm">
+                                {tripDetails.title}
+                            </h1>
+                        </div>
                     </div>
-                </header>
+                </header >
 
                 {/* Content Area - Rounded Top with Shadow Separator */}
-                <div className="flex-1 bg-[var(--md-sys-color-surface-container)] rounded-t-[32px] overflow-hidden flex flex-col shadow-[0_-8px_30px_rgba(0,0,0,0.08)] relative z-0">
+                < div className="flex-1 bg-[var(--md-sys-color-surface-container)] rounded-t-[32px] overflow-hidden flex flex-col shadow-[0_-8px_30px_rgba(0,0,0,0.08)] relative z-0" >
                     {/* Desktop Nav removed or redundant for mobile-first view? Keeping it if needed but hiding for now or simplifying */}
                     {/* We rely on Bottom Nav for mobile. */}
 
@@ -715,7 +777,7 @@ const TripDashboard = () => {
                                             />
                                             <button
                                                 onClick={() => setSortOrder(prev => prev === 'alpha' ? 'default' : 'alpha')}
-                                                className={`p-2 rounded-full text-sm font-bold shrink-0 transition-colors ${sortOrder === 'alpha'
+                                                className={`p-2 rounded-full text-sm font-bold shrink-0  ${sortOrder === 'alpha'
                                                     ? 'bg-[var(--md-sys-color-tertiary-container)] text-[var(--md-sys-color-on-tertiary-container)]'
                                                     : 'bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] border border-[var(--md-sys-color-outline)]'
                                                     }`}
@@ -725,7 +787,7 @@ const TripDashboard = () => {
                                         </div>
 
                                         {/* Search Bar - M3 Filled Tonal */}
-                                        <div className="flex items-center gap-3 bg-[var(--md-sys-color-surface-container-high)] rounded-full px-4 py-3 transition-colors focus-within:bg-[var(--md-sys-color-surface-container-highest)]">
+                                        <div className="flex items-center gap-3 bg-[var(--md-sys-color-surface-container-high)] rounded-full px-4 py-3  focus-within:bg-[var(--md-sys-color-surface-container-highest)]">
                                             <Search size={20} className="text-[var(--md-sys-color-on-surface-variant)]" />
                                             <input
                                                 type="text"
@@ -740,9 +802,9 @@ const TripDashboard = () => {
                                         <div className="flex gap-2 overflow-x-auto scroller no-scrollbar pb-1">
                                             <button
                                                 onClick={() => setFilterCat("Tutti")}
-                                                className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all border ${filterCat === "Tutti"
+                                                className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap  border ${filterCat === "Tutti"
                                                     ? 'bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] border-transparent'
-                                                    : 'bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] border-[var(--md-sys-color-outline)] hover:bg-[var(--md-sys-color-surface-container-highest)]'
+                                                    : 'bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] border-[var(--md-sys-color-outline)]'
                                                     }`}
                                             >
                                                 Tutti
@@ -751,9 +813,9 @@ const TripDashboard = () => {
                                                 <button
                                                     key={c}
                                                     onClick={() => setFilterCat(c)}
-                                                    className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all border ${filterCat === c
+                                                    className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap  border ${filterCat === c
                                                         ? 'bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] border-transparent'
-                                                        : 'bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] border-[var(--md-sys-color-outline)] hover:bg-[var(--md-sys-color-surface-container-highest)]'
+                                                        : 'bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] border-[var(--md-sys-color-outline)]'
                                                         }`}
                                                 >
                                                     {filterCat === c && <Check size={14} className="inline mr-1" />}
@@ -767,11 +829,11 @@ const TripDashboard = () => {
                                     <div className="space-y-4">
                                         <Button onClick={() => { setEditingId(null); setNewItemItinerary({ nome: "", categoria: "Museo", quartiere: "", durata: "", orari: "", eccezioni: "", img: "", mapEmbed: "" }); setActiveModal('itinerary'); }} icon={Plus} className="w-full shadow-md">Aggiungi Attrazione</Button>
                                         {filteredItinerary.map(place => (
-                                            <div key={place.id} className="relative group rounded-[28px] overflow-hidden bg-[var(--md-sys-color-surface-container-low)] shadow-sm transition-all hover:shadow-md mb-4">
+                                            <div key={place.id} className="relative group rounded-[28px] overflow-hidden bg-[var(--md-sys-color-surface-container-low)] shadow-sm   mb-4">
                                                 {/* Image Area - Taller and distinctive */}
                                                 <div className="relative h-56 w-full" onClick={() => setViewingItem(place)}>
                                                     {place.img ? (
-                                                        <img src={place.img} className={`w-full h-full object-cover transition-all duration-700 group-hover:scale-105 ${place.visited ? 'grayscale opacity-50' : ''}`} />
+                                                        <img src={place.img} className={`w-full h-full object-cover    ${place.visited ? 'grayscale opacity-50' : ''}`} />
                                                     ) : (
                                                         <div className={`w-full h-full flex items-center justify-center text-[var(--md-sys-color-on-surface-variant)] ${place.visited ? 'bg-[var(--md-sys-color-surface-variant)]' : 'bg-[var(--md-sys-color-surface-variant)]'}`}>
                                                             <MapPin size={48} className="opacity-20" />
@@ -794,27 +856,37 @@ const TripDashboard = () => {
                                                     <div className="absolute top-4 right-4 flex flex-col gap-2 z-20">
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); setNewItemItinerary(place); setEditingId(place.id); setActiveModal('itinerary'); }}
-                                                            className="w-10 h-10 rounded-[12px] bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-on-surface)] flex items-center justify-center shadow-md active:scale-90 transition-transform"
+                                                            className="w-10 h-10 rounded-[12px] bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-on-surface)] flex items-center justify-center shadow-md"
                                                         >
                                                             <Edit size={18} />
                                                         </button>
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); handleDeleteItinerary(place.id); }}
-                                                            className="w-10 h-10 rounded-[12px] bg-[#FFDAD6] text-[#410002] flex items-center justify-center shadow-md active:scale-90 transition-transform"
+                                                            className="w-10 h-10 rounded-[12px] bg-[#FFDAD6] text-[#410002] flex items-center justify-center shadow-md"
                                                         >
                                                             <Trash size={18} />
                                                         </button>
                                                     </div>
 
                                                     {/* Title & Category on Image */}
-                                                    <div className={`absolute bottom-4 left-4 right-4 z-10 pointer-events-none transition-opacity ${place.visited ? 'opacity-50' : 'opacity-100'}`}>
+                                                    <div className={`absolute bottom-4 left-4 right-4 z-10 pointer-events-none  ${place.visited ? 'opacity-50' : 'opacity-100'}`}>
                                                         <div className="flex items-center gap-2 mb-1">
-                                                            <span className={`backdrop-blur-md px-2 py-0.5 rounded-md text-xs font-bold uppercase tracking-wide border border-white/10 text-white bg-black/30`}>
+                                                            <span className={`backdrop-blur-md px-2 py-0.5 rounded-md text-xs font-bold uppercase tracking-wide border border-white/10 text-white ${{
+                                                                "Museo": "bg-purple-600/80",
+                                                                "Mercato": "bg-orange-600/80",
+                                                                "Parco": "bg-green-600/80",
+                                                                "Piazza": "bg-yellow-600/80",
+                                                                "Ristorante": "bg-red-600/80",
+                                                                "Tempo libero": "bg-blue-600/80",
+                                                                "Grattacielo": "bg-cyan-600/80",
+                                                                "Altro": "bg-gray-600/80"
+                                                            }[place.categoria] || "bg-black/30"
+                                                                }`}>
                                                                 {place.categoria}
                                                             </span>
                                                             {place.quartiere && <span className="text-white text-xs opacity-90 font-medium flex items-center gap-1"><MapPin size={10} /> {place.quartiere}</span>}
                                                         </div>
-                                                        <h3 className="headline-small leading-tight font-bold text-white drop-shadow-sm">{place.nome}</h3>
+                                                        <h3 className="text-3xl leading-tight font-bold text-white drop-shadow-md">{place.nome}</h3>
                                                     </div>
                                                 </div>
 
@@ -827,7 +899,7 @@ const TripDashboard = () => {
                                                     </div>
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); toggleVisit(place.id, place.visited); }}
-                                                        className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${place.visited ? 'bg-[#C4EED0] text-[#07210F]' : 'bg-[var(--md-sys-color-surface-variant)] text-[var(--md-sys-color-on-surface-variant)]'}`}
+                                                        className={`w-12 h-12 rounded-full flex items-center justify-center  ${place.visited ? 'bg-[#C4EED0] text-[#07210F]' : 'bg-[var(--md-sys-color-surface-variant)] text-[var(--md-sys-color-on-surface-variant)]'}`}
                                                     >
                                                         {place.visited ? <Check size={24} strokeWidth={3} /> : <CheckCircle size={24} className="opacity-50" />}
                                                     </button>
@@ -866,12 +938,12 @@ const TripDashboard = () => {
                                                         </div>
                                                         <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                                                             {t.ticket && (
-                                                                <button onClick={() => setViewingTicket(t)} className="p-2 text-[var(--md-sys-color-primary)] bg-[var(--md-sys-color-primary-container)] hover:shadow-md transition-all rounded-full mr-1">
+                                                                <button onClick={() => setViewingTicket(t)} className="p-2 text-[var(--md-sys-color-primary)] bg-[var(--md-sys-color-primary-container)]   rounded-full mr-1">
                                                                     <QrCode size={18} />
                                                                 </button>
                                                             )}
-                                                            <button onClick={() => { setNewItemTransport(t); setEditingId(t.id); setActiveModal('transport'); }} className="p-2 text-[var(--md-sys-color-on-surface-variant)] hover:bg-[#F0F4F8] rounded-full"><Edit size={18} /></button>
-                                                            <button onClick={() => handleDeleteTransport(t.id)} className="p-2 text-[var(--md-sys-color-on-surface-variant)] hover:bg-[#FFDAD6] hover:text-[#410002] rounded-full"><Trash size={18} /></button>
+                                                            <button onClick={() => { setNewItemTransport(t); setEditingId(t.id); setActiveModal('transport'); }} className="p-2 text-[var(--md-sys-color-on-surface-variant)]  rounded-full"><Edit size={18} /></button>
+                                                            <button onClick={() => handleDeleteTransport(t.id)} className="p-2 text-[var(--md-sys-color-on-surface-variant)]   rounded-full"><Trash size={18} /></button>
                                                         </div>
                                                     </div>
 
@@ -887,10 +959,10 @@ const TripDashboard = () => {
                                                     </div>
 
                                                     <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                                                        <button onClick={() => toggleTransportBooked(t.id, t.prenotato)} className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-colors ${t.prenotato ? 'bg-[#E8DEF8] text-[#1D192B] border-transparent' : 'border-[var(--md-sys-color-outline)] text-[var(--md-sys-color-on-surface-variant)]'}`}>
+                                                        <button onClick={() => toggleTransportBooked(t.id, t.prenotato)} className={`flex-1 py-2 rounded-lg text-xs font-bold border  ${t.prenotato ? 'bg-[#E8DEF8] text-[#1D192B] border-transparent' : 'border-[var(--md-sys-color-outline)] text-[var(--md-sys-color-on-surface-variant)]'}`}>
                                                             {t.prenotato ? 'Prenotato' : 'Prenota'}
                                                         </button>
-                                                        <button onClick={() => toggleTransportPaid(t.id, t.pagato)} className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-colors ${t.pagato ? 'bg-[#C4EED0] text-[#07210F] border-transparent' : 'border-[var(--md-sys-color-outline)] text-[var(--md-sys-color-on-surface-variant)]'}`}>
+                                                        <button onClick={() => toggleTransportPaid(t.id, t.pagato)} className={`flex-1 py-2 rounded-lg text-xs font-bold border  ${t.pagato ? 'bg-[#C4EED0] text-[#07210F] border-transparent' : 'border-[var(--md-sys-color-outline)] text-[var(--md-sys-color-on-surface-variant)]'}`}>
                                                             {t.pagato ? 'Pagato' : 'Paga'}
                                                         </button>
                                                     </div>
@@ -906,7 +978,7 @@ const TripDashboard = () => {
                                 {/* Moved Stats Here - Only for Expenses - Material 3 Expressive Complementary Shapes */}
                                 <div className="grid grid-cols-2 gap-3">
                                     {/* GIÀ PAGATO - Left rounded shape */}
-                                    <div onClick={handleShowDebts} className={`payment-card payment-card-paid relative overflow-hidden p-5 rounded-l-[32px] rounded-r-[12px] flex flex-col items-start gap-2 shadow-lg border-2 cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] ${themeMode === 'dark' ? 'bg-green-900 border-green-700 text-green-100' : 'bg-gradient-to-br from-[#C4EED0] via-[#D8F5E0] to-[#E6F9EE] border-[#A3E4B5]/50 text-[#0A5C1F]'}`}>                                        {/* Decorative background element */}
+                                    <div onClick={handleShowDebts} className={`payment-card payment-card-paid relative overflow-hidden p-5 rounded-l-[32px] rounded-r-[12px] flex flex-col items-start gap-2 shadow-lg border-2 cursor-pointer    ${themeMode === 'dark' ? 'bg-green-900 border-green-700 text-green-100' : 'bg-gradient-to-br from-[#C4EED0] via-[#D8F5E0] to-[#E6F9EE] border-[#A3E4B5]/50 text-[#0A5C1F]'}`}>                                        {/* Decorative background element */}
                                         <div className={`absolute -right-4 -top-4 w-20 h-20 rounded-full ${themeMode === 'dark' ? 'bg-green-800/20' : 'bg-[#0A5C1F]/5'}`}></div>
                                         <div className={`absolute -right-1 -bottom-1 w-12 h-12 rounded-full ${themeMode === 'dark' ? 'bg-green-800/30' : 'bg-[#0A5C1F]/8'}`}></div>
                                         {/* Icon */}
@@ -942,7 +1014,7 @@ const TripDashboard = () => {
                                         />
                                         <button
                                             onClick={() => setSortOrder(prev => prev === 'alpha' ? 'default' : 'alpha')}
-                                            className={`p-2 rounded-full text-sm font-bold shrink-0 transition-colors ${sortOrder === 'alpha'
+                                            className={`p-2 rounded-full text-sm font-bold shrink-0  ${sortOrder === 'alpha'
                                                 ? 'bg-[var(--md-sys-color-tertiary-container)] text-[var(--md-sys-color-on-tertiary-container)]'
                                                 : 'bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)] border border-[var(--md-sys-color-outline)]'
                                                 }`}
@@ -975,21 +1047,21 @@ const TripDashboard = () => {
                                             <div className="flex gap-2">
                                                 <button
                                                     onClick={() => togglePaid(e.id, e.pagato)}
-                                                    className={`w-10 h-10 rounded-[12px] flex items-center justify-center transition-all duration-200 active:scale-90 ${e.pagato
-                                                        ? 'bg-[#C4EED0] text-[#0A5C1F] shadow-sm hover:shadow-md'
-                                                        : 'bg-[var(--md-sys-color-surface-container-highest)] text-[var(--md-sys-color-on-surface-variant)] hover:bg-[var(--md-sys-color-surface-variant)]'}`}
+                                                    className={`w-10 h-10 rounded-[12px] flex items-center justify-center    ${e.pagato
+                                                        ? 'bg-[#C4EED0] text-[#0A5C1F] shadow-sm'
+                                                        : 'bg-[var(--md-sys-color-surface-container-highest)] text-[var(--md-sys-color-on-surface-variant)]'}`}
                                                 >
                                                     {e.pagato ? <Check size={20} strokeWidth={3} /> : <div className="w-5 h-5 border-2 border-current rounded-full"></div>}
                                                 </button>
                                                 <button
                                                     onClick={() => { setNewItemExpense(e); setEditingId(e.id); setActiveModal('expenses'); }}
-                                                    className="w-10 h-10 rounded-[12px] bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] flex items-center justify-center transition-all duration-200 active:scale-90 hover:shadow-md"
+                                                    className="w-10 h-10 rounded-[12px] bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] flex items-center justify-center"
                                                 >
                                                     <Edit size={18} />
                                                 </button>
                                                 <button
                                                     onClick={() => handleDeleteExpense(e.id)}
-                                                    className="w-10 h-10 rounded-[12px] bg-[#FFDAD6] text-[#410002] flex items-center justify-center transition-all duration-200 active:scale-90 hover:shadow-md hover:bg-[#FFB4AB]"
+                                                    className="w-10 h-10 rounded-[12px] bg-[#FFDAD6] text-[#410002] flex items-center justify-center"
                                                 >
                                                     <Trash size={18} />
                                                 </button>
@@ -999,191 +1071,218 @@ const TripDashboard = () => {
                                 ))}
                             </div>
                         )}
-                        {activeTab === "itinerary" && (
-                            <div className="space-y-6">
-                                <div className="flex justify-between items-center bg-[var(--md-sys-color-surface-container-low)] p-3 rounded-xl shadow-sm border border-[var(--md-sys-color-outline-variant)]"><h2 className="font-bold text-[var(--md-sys-color-on-surface)] flex gap-2"><Calendar size={20} className="text-[var(--md-sys-color-primary)]" /> Il tuo Viaggio</h2><button onClick={() => setActiveModal('day')} className="bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] px-3 py-1.5 rounded-full text-xs font-bold">+ Giornata</button></div>
-                                {days.map(day => {
-                                    const dateObj = new Date(day.data);
-                                    const dayName = dateObj.toLocaleDateString('it-IT', { weekday: 'long' });
-                                    const dayNumber = dateObj.getDate();
-                                    const monthYear = dateObj.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+                        {
+                            activeTab === "itinerary" && (
+                                <div className="space-y-6">
+                                    <div className="flex justify-between items-center bg-[var(--md-sys-color-surface-container-low)] p-3 rounded-xl shadow-sm border border-[var(--md-sys-color-outline-variant)]"><h2 className="font-bold text-[var(--md-sys-color-on-surface)] flex gap-2"><Calendar size={20} className="text-[var(--md-sys-color-primary)]" /> Il tuo Viaggio</h2><button onClick={() => setActiveModal('day')} className="bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] px-3 py-1.5 rounded-full text-xs font-bold">+ Giornata</button></div>
+                                    {days.map(day => {
+                                        const dateObj = new Date(day.data);
+                                        const dayName = dateObj.toLocaleDateString('it-IT', { weekday: 'long' });
+                                        const dayNumber = dateObj.getDate();
+                                        const monthYear = dateObj.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
 
-                                    return (
-                                        <div key={day.id} className="relative pl-6 border-l-2 border-[var(--md-sys-color-outline-variant)] pb-8 last:border-l-transparent">
-                                            <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full border-4 border-[var(--md-sys-color-surface)] bg-[var(--md-sys-color-primary)] shadow-sm z-10"></div>
+                                        return (
+                                            <div key={day.id} className="relative pl-6 border-l-2 border-[var(--md-sys-color-outline-variant)] pb-8 last:border-l-transparent">
+                                                <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full border-4 border-[var(--md-sys-color-surface)] bg-[var(--md-sys-color-primary)] shadow-sm z-10"></div>
 
-                                            <div className="bg-[var(--md-sys-color-surface-container-low)] rounded-[24px] shadow-sm overflow-hidden mb-2">
-                                                <div className="p-5 flex justify-between items-start">
-                                                    <div>
-                                                        <div className="flex items-baseline gap-3">
-                                                            <h3 className="headline-small font-bold text-[var(--md-sys-color-on-surface)] capitalize">{dayName}</h3>
-                                                            <span className="display-small font-bold text-[var(--md-sys-color-primary)]">{dayNumber}</span>
+                                                <div className="bg-[var(--md-sys-color-surface-container-low)] rounded-[24px] shadow-sm overflow-hidden mb-2">
+                                                    <div className="p-5 flex justify-between items-start">
+                                                        <div>
+                                                            <div className="flex items-baseline gap-2 mb-1">
+                                                                <h3 className="text-xl font-bold text-[var(--md-sys-color-on-surface)] capitalize opacity-80">{dayName}</h3>
+                                                                <span className="text-4xl font-black text-[var(--md-sys-color-primary)] leading-none">{dayNumber}</span>
+                                                            </div>
+                                                            <div className="text-[10px] font-bold text-[var(--md-sys-color-on-surface-variant)] uppercase tracking-[0.2em]">{monthYear}</div>
                                                         </div>
-                                                        <div className="label-medium font-bold text-[var(--md-sys-color-on-surface-variant)] uppercase tracking-wider">{monthYear}</div>
-                                                    </div>
-                                                    <div className="flex flex-col gap-2 items-end">
-                                                        <button
-                                                            onClick={() => handleDeleteDay(day.id)}
-                                                            className="w-10 h-10 rounded-[12px] bg-[#FFDAD6] text-[#410002] flex items-center justify-center transition-all duration-200 active:scale-90 hover:shadow-md hover:bg-[#FFB4AB]"
-                                                        >
-                                                            <Trash size={18} />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => { setEditingId(day.id); setActiveModal('event'); }}
-                                                            className="h-10 px-4 rounded-[12px] bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] text-xs font-bold flex items-center gap-1.5 transition-all duration-200 active:scale-95 hover:shadow-md"
-                                                        >
-                                                            <Plus size={16} /> Evento
-                                                        </button>
-                                                    </div>
-                                                </div>
-
-                                                <div className="border-t border-[var(--md-sys-color-outline-variant)] pt-4">
-                                                    {(!day.events || day.events.length === 0) ? (
-                                                        <div className="p-8 text-center text-[var(--md-sys-color-on-surface-variant)] italic text-sm">
-                                                            Nessun evento pianificato per oggi
+                                                        <div className="flex flex-col gap-2 items-end">
+                                                            <button
+                                                                onClick={() => { setEditingId(day.id); setActiveModal('event'); }}
+                                                                className="h-10 px-4 rounded-[12px] bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] text-xs font-bold flex items-center gap-1.5"
+                                                            >
+                                                                <Plus size={16} /> Evento
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDeleteDay(day.id)}
+                                                                className="w-10 h-10 rounded-[12px] bg-[#FFDAD6] text-[#410002] flex items-center justify-center"
+                                                            >
+                                                                <Trash size={18} />
+                                                            </button>
                                                         </div>
-                                                    ) : (
-                                                        <div className="space-y-0 pb-4">
-                                                            {day.events.map((ev, evIndex) => {
-                                                                const attraction = ev.type === 'attraction' ? itinerary.find(i => i.id === ev.attractionId) : null;
-                                                                const isLast = evIndex === day.events.length - 1;
+                                                    </div>
 
-                                                                return (
-                                                                    <div
-                                                                        key={ev.id}
-                                                                        onClick={() => { setEditingId(day.id); setNewItemEvent(ev); setActiveModal('event'); }}
-                                                                        className="relative pl-4 pb-6 last:pb-0 group"
-                                                                    >
-                                                                        {/* Timeline Line */}
-                                                                        {!isLast && (
-                                                                            <div className="absolute left-[27px] top-[40px] bottom-[-10px] w-0.5 bg-[var(--md-sys-color-outline-variant)] opacity-50 z-0"></div>
-                                                                        )}
+                                                    <div className="border-t border-[var(--md-sys-color-outline-variant)] pt-4">
+                                                        {(!day.events || day.events.length === 0) ? (
+                                                            <div className="p-8 text-center text-[var(--md-sys-color-on-surface-variant)] italic text-sm">
+                                                                Nessun evento pianificato per oggi
+                                                            </div>
+                                                        ) : (
+                                                            <div className="space-y-0 pb-4">
+                                                                {day.events.map((ev, evIndex) => {
+                                                                    const attraction = ev.type === 'attraction' ? itinerary.find(i => i.id === ev.attractionId) : null;
+                                                                    const isLast = evIndex === day.events.length - 1;
 
-                                                                        <div className="flex gap-4 relative z-10">
-                                                                            {/* Time & Dot */}
-                                                                            <div className="flex flex-col items-center gap-2 pt-1 min-w-[50px]">
-                                                                                <div className="text-sm font-bold text-[var(--md-sys-color-primary)] font-mono bg-[var(--md-sys-color-surface-container-low)] z-10 py-1">{ev.time}</div>
-                                                                                <div className="w-3 h-3 rounded-full border-2 border-[var(--md-sys-color-primary)] bg-[var(--md-sys-color-surface-container-low)] z-10"></div>
-                                                                            </div>
+                                                                    return (
+                                                                        <div
+                                                                            key={ev.id}
+                                                                            onClick={() => { setEditingId(day.id); setNewItemEvent(ev); setActiveModal('event'); }}
+                                                                            className="relative pl-4 pb-6 last:pb-0 group"
+                                                                        >
+                                                                            {/* Timeline Line */}
+                                                                            {!isLast && (
+                                                                                <div className="absolute left-[27px] top-[40px] bottom-[-10px] w-0.5 bg-[var(--md-sys-color-outline-variant)] opacity-50 z-0"></div>
+                                                                            )}
 
-                                                                            {/* Card Content */}
-                                                                            <div className="flex-1 bg-[var(--md-sys-color-surface-container-high)] rounded-[20px] p-3 shadow-sm border border-[var(--md-sys-color-outline-variant)] hover:shadow-md transition-all active:scale-[0.98] cursor-pointer overflow-hidden flex gap-3">
-
-                                                                                {/* Image Thumbnail */}
-                                                                                <div className="w-20 h-20 rounded-[12px] bg-[var(--md-sys-color-surface-variant)] overflow-hidden shrink-0 relative">
-                                                                                    {attraction && attraction.img ? (
-                                                                                        <img src={attraction.img} alt={attraction.nome} className={`w-full h-full object-cover transition-all ${attraction.visited ? 'grayscale opacity-60' : ''}`} />
-                                                                                    ) : (
-                                                                                        <div className={`w-full h-full flex items-center justify-center text-[var(--md-sys-color-on-surface-variant)] opacity-50 ${attraction?.visited ? 'grayscale opacity-60' : ''}`}>
-                                                                                            {ev.type === 'custom' ? <Star size={24} /> : <MapPin size={24} />}
-                                                                                        </div>
-                                                                                    )}
-                                                                                    {/* Category Overlay on Image (Small) */}
-                                                                                    {attraction && (
-                                                                                        <div className="absolute bottom-0 left-0 right-0 p-1 bg-black/40 backdrop-blur-[2px] flex justify-center">
-                                                                                            <span className="text-[8px] font-bold text-white uppercase tracking-wider truncate px-1">{attraction.categoria}</span>
-                                                                                        </div>
-                                                                                    )}
-                                                                                    {/* Visited Check Overlay */}
-                                                                                    {attraction && attraction.visited && (
-                                                                                        <div className="absolute inset-0 flex items-center justify-center bg-black/10 backdrop-blur-[1px]">
-                                                                                            <div className="bg-[#C4EED0] text-[#07210F] rounded-full p-1 shadow-sm">
-                                                                                                <Check size={14} strokeWidth={4} />
-                                                                                            </div>
-                                                                                        </div>
-                                                                                    )}
+                                                                            <div className="flex gap-4 relative z-10">
+                                                                                {/* Time & Dot */}
+                                                                                <div className="flex flex-col items-center gap-2 pt-1 min-w-[50px]">
+                                                                                    <div className="text-sm font-bold text-[var(--md-sys-color-primary)] font-mono bg-[var(--md-sys-color-surface-container-low)] z-10 py-1">{ev.time}</div>
+                                                                                    <div className="w-3 h-3 rounded-full border-2 border-[var(--md-sys-color-primary)] bg-[var(--md-sys-color-surface-container-low)] z-10"></div>
                                                                                 </div>
 
-                                                                                <div className="flex-1 min-w-0 py-1 flex flex-col justify-between">
-                                                                                    <div>
-                                                                                        <div className="flex justify-between items-start">
-                                                                                            <h4 className={`font-bold text-[15px] leading-tight line-clamp-2 ${ev.type === 'custom' ? 'text-[var(--md-sys-color-on-surface)]' : 'text-[var(--md-sys-color-primary)]'} ${attraction?.visited ? 'line-through opacity-60' : ''}`}>
-                                                                                                {ev.type === 'custom' ? ev.customTitle : (attraction?.nome || 'Attrazione')}
-                                                                                            </h4>
-                                                                                            <div className="flex gap-1">
-                                                                                                {attraction && (
-                                                                                                    <button
-                                                                                                        onClick={(e) => { e.stopPropagation(); toggleVisit(attraction.id, attraction.visited); }}
-                                                                                                        className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${attraction.visited ? 'bg-[#C4EED0] text-[#07210F]' : 'bg-[var(--md-sys-color-surface-container-highest)] text-[var(--md-sys-color-on-surface-variant)] hover:bg-[var(--md-sys-color-surface-variant)]'}`}
-                                                                                                        title={attraction.visited ? "Segna come non visitato" : "Segna come visitato"}
-                                                                                                    >
-                                                                                                        <Check size={16} strokeWidth={attraction.visited ? 3 : 2} />
-                                                                                                    </button>
-                                                                                                )}
-                                                                                                <button onClick={(e) => { e.stopPropagation(); handleDeleteEvent(day.id, ev.id); }} className="w-8 h-8 flex items-center justify-center text-[var(--md-sys-color-on-surface-variant)] hover:bg-[#FFDAD6] hover:text-[#410002] rounded-full transition-colors"><X size={16} /></button>
-                                                                                            </div>
-                                                                                        </div>
+                                                                                {/* Card Content */}
+                                                                                <div className="flex-1 bg-[var(--md-sys-color-surface-container-high)] rounded-[20px] p-3 shadow-sm border border-[var(--md-sys-color-outline-variant)]    cursor-pointer overflow-hidden flex gap-3">
 
-                                                                                        {/* Meta Info */}
-                                                                                        {attraction && attraction.quartiere && (
-                                                                                            <div className="flex items-center gap-1 text-xs text-[var(--md-sys-color-on-surface-variant)] mt-1 truncate">
-                                                                                                <MapPin size={10} /> {attraction.quartiere}
+                                                                                    {/* Image Thumbnail */}
+                                                                                    <div className="w-20 h-20 rounded-[12px] bg-[var(--md-sys-color-surface-variant)] overflow-hidden shrink-0 relative">
+                                                                                        {attraction && attraction.img ? (
+                                                                                            <img src={attraction.img} alt={attraction.nome} className={`w-full h-full object-cover  ${attraction.visited ? 'grayscale opacity-60' : ''}`} />
+                                                                                        ) : (
+                                                                                            <div className={`w-full h-full flex items-center justify-center text-[var(--md-sys-color-on-surface-variant)] opacity-50 ${attraction?.visited ? 'grayscale opacity-60' : ''}`}>
+                                                                                                {ev.type === 'custom' ? <Star size={24} /> : <MapPin size={24} />}
+                                                                                            </div>
+                                                                                        )}
+                                                                                        {/* Category Overlay on Image (Small) */}
+                                                                                        {attraction && (
+                                                                                            <div className="absolute bottom-0 left-0 right-0 p-1 bg-black/40 backdrop-blur-[2px] flex justify-center">
+                                                                                                <span className="text-[8px] font-bold text-white uppercase tracking-wider truncate px-1">{attraction.categoria}</span>
+                                                                                            </div>
+                                                                                        )}
+                                                                                        {/* Visited Check Overlay */}
+                                                                                        {attraction && attraction.visited && (
+                                                                                            <div className="absolute inset-0 flex items-center justify-center bg-black/10 backdrop-blur-[1px]">
+                                                                                                <div className="bg-[#C4EED0] text-[#07210F] rounded-full p-1 shadow-sm">
+                                                                                                    <Check size={14} strokeWidth={4} />
+                                                                                                </div>
                                                                                             </div>
                                                                                         )}
                                                                                     </div>
 
-                                                                                    {/* Badges & Notes */}
-                                                                                    <div className="flex flex-wrap gap-1.5 mt-2">
-                                                                                        {ev.type === 'custom' && (
-                                                                                            <span className="text-[10px] bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider">
-                                                                                                {ev.customTitle ? 'Note' : 'Altro'}
-                                                                                            </span>
-                                                                                        )}
-                                                                                        {ev.notes && <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] flex items-center gap-1 bg-[var(--md-sys-color-surface-variant)]/30 px-2 py-0.5 rounded-md font-medium truncate max-w-full"><FileText size={10} /> {ev.notes}</span>}
+                                                                                    <div className="flex-1 min-w-0 py-1 flex flex-col justify-between">
+                                                                                        <div>
+                                                                                            <div className="flex justify-between items-start">
+                                                                                                <h4 className={`font-bold text-[15px] leading-tight line-clamp-2 ${ev.type === 'custom' ? 'text-[var(--md-sys-color-on-surface)]' : 'text-[var(--md-sys-color-primary)]'} ${attraction?.visited ? 'line-through opacity-60' : ''}`}>
+                                                                                                    {ev.type === 'custom' ? ev.customTitle : (attraction?.nome || 'Attrazione')}
+                                                                                                </h4>
+                                                                                                <div className="flex gap-1">
+                                                                                                    {attraction && (
+                                                                                                        <button
+                                                                                                            onClick={(e) => { e.stopPropagation(); toggleVisit(attraction.id, attraction.visited); }}
+                                                                                                            className={`w-8 h-8 flex items-center justify-center rounded-full  ${attraction.visited ? 'bg-[#C4EED0] text-[#07210F]' : 'bg-[var(--md-sys-color-surface-container-highest)] text-[var(--md-sys-color-on-surface-variant)]'}`} title={attraction.visited ? "Segna come non visitato" : "Segna come visitato"}
+                                                                                                        >
+                                                                                                            <Check size={16} strokeWidth={attraction.visited ? 3 : 2} />
+                                                                                                        </button>
+                                                                                                    )}
+                                                                                                    <button onClick={(e) => { e.stopPropagation(); handleDeleteEvent(day.id, ev.id); }} className="w-8 h-8 flex items-center justify-center text-[var(--md-sys-color-on-surface-variant)] rounded-full"><Trash size={16} /></button>
+                                                                                                </div>
+                                                                                            </div>
+
+                                                                                            {/* Meta Info */}
+                                                                                            {attraction && attraction.quartiere && (
+                                                                                                <div className="flex items-center gap-1 text-xs text-[var(--md-sys-color-on-surface-variant)] mt-1 truncate">
+                                                                                                    <MapPin size={10} /> {attraction.quartiere}
+                                                                                                </div>
+                                                                                            )}
+                                                                                        </div>
+
+                                                                                        {/* Badges & Notes */}
+                                                                                        <div className="flex flex-wrap gap-1.5 mt-2">
+                                                                                            {ev.type === 'custom' && (
+                                                                                                <span className="text-[10px] bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider">
+                                                                                                    {ev.customTitle ? 'Note' : 'Altro'}
+                                                                                                </span>
+                                                                                            )}
+                                                                                            {ev.notes && <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] flex items-center gap-1 bg-[var(--md-sys-color-surface-variant)]/30 px-2 py-0.5 rounded-md font-medium truncate max-w-full"><FileText size={10} /> {ev.notes}</span>}
+                                                                                        </div>
                                                                                     </div>
                                                                                 </div>
                                                                             </div>
                                                                         </div>
-                                                                    </div>
-                                                                );
-                                                            })}
-                                                        </div>
-                                                    )}
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
+                                        );
+                                    })}
+                                </div>
+                            )
+                        }
                         {activeTab === "backpack" && <BackpackTab tripId={tripId} tripDetails={tripDetails} participants={tripDetails.participants} weatherData={weatherData} />}
                         {activeTab === "documents" && <DocumentsTab tripId={tripId} tripDetails={tripDetails} />}
-                    </div>
+                    </div >
 
-                </div>
+                </div >
 
                 {isScanning && (
                     <TicketScanner
-                        onScan={(data) => {
+                        onScan={async (data) => {
+                            // 1. Save Image Immediately
                             setNewItemTransport(prev => ({ ...prev, ticket: data }));
                             setIsScanning(false);
+
+                            // 2. Trigger Gemini Analysis
+                            if (window.GeminiService && window.GeminiService.scanTicket) {
+                                alert("Analisi biglietto in corso...\nAttendi qualche secondo.");
+                                const result = await window.GeminiService.scanTicket(data);
+
+                                if (result) {
+                                    setNewItemTransport(prev => ({
+                                        ...prev,
+                                        ticket: data,
+                                        dettaglio: result.carrier && result.flightNumber ? `Volo ${result.carrier} ${result.flightNumber}` : prev.dettaglio,
+                                        partenza: result.origin || prev.partenza,
+                                        arrivo: result.destination || prev.arrivo,
+                                        data: result.date ? result.date.split('-').reverse().join('/') : prev.data,
+                                        ora: result.departureTime || prev.ora,
+                                        terminal: result.terminal || prev.terminal,
+                                        gate: result.gate || prev.gate
+                                    }));
+                                    alert(`Dati estratti!\nVolo: ${result.flightNumber}\nData: ${result.date}`);
+                                }
+                            }
                         }}
                         onClose={() => setIsScanning(false)}
                     />
                 )}
 
-                {viewingTicket && (
-                    <TicketView
-                        ticketData={viewingTicket.ticket}
-                        transportItem={viewingTicket}
-                        onClose={() => setViewingTicket(null)}
-                    />
-                )}
+                {
+                    viewingTicket && (
+                        <TicketView
+                            ticketData={viewingTicket.ticket}
+                            transportItem={viewingTicket}
+                            onClose={() => setViewingTicket(null)}
+                        />
+                    )
+                }
 
                 {/* Modals outside main container flow for better z-index management */}
                 <Modal isOpen={activeModal === 'itinerary'} onClose={() => { setActiveModal(null); setEditingId(null); }} title={editingId ? "Modifica Attrazione" : "Nuova Attrazione"} >
                     <InputGroup label="Nome">
                         <input
+                            ref={itineraryNameInputRef}
+                            id="itinerary-name-input"
                             type="text"
                             placeholder="Es. London Eye"
-                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
+                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)]  text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
                             value={newItemItinerary.nome}
                             onChange={e => setNewItemItinerary({ ...newItemItinerary, nome: e.target.value })}
                         />
                     </InputGroup>
                     <InputGroup label="Categoria">
                         <select
-                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all appearance-none text-[var(--md-sys-color-on-surface)]"
+                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)]  appearance-none text-[var(--md-sys-color-on-surface)]"
                             value={newItemItinerary.categoria}
                             onChange={e => setNewItemItinerary({ ...newItemItinerary, categoria: e.target.value })}
                         >
@@ -1194,7 +1293,7 @@ const TripDashboard = () => {
                         <input
                             type="text"
                             placeholder="Es. Westminster"
-                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
+                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)]  text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
                             value={newItemItinerary.quartiere}
                             onChange={e => setNewItemItinerary({ ...newItemItinerary, quartiere: e.target.value })}
                         />
@@ -1204,7 +1303,7 @@ const TripDashboard = () => {
                             <input
                                 type="text"
                                 placeholder="Es. 2 ore"
-                                className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
+                                className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)]  text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
                                 value={newItemItinerary.durata}
                                 onChange={e => setNewItemItinerary({ ...newItemItinerary, durata: e.target.value })}
                             />
@@ -1213,7 +1312,7 @@ const TripDashboard = () => {
                             <input
                                 type="text"
                                 placeholder="10:00 - 18:00"
-                                className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
+                                className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)]  text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
                                 value={newItemItinerary.orari}
                                 onChange={e => setNewItemItinerary({ ...newItemItinerary, orari: e.target.value })}
                             />
@@ -1223,7 +1322,7 @@ const TripDashboard = () => {
                         <input
                             type="text"
                             placeholder="Es. Chiuso lunedì"
-                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
+                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)]  text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
                             value={newItemItinerary.eccezioni}
                             onChange={e => setNewItemItinerary({ ...newItemItinerary, eccezioni: e.target.value })}
                         />
@@ -1232,7 +1331,7 @@ const TripDashboard = () => {
                         <input
                             type="text"
                             placeholder="https://..."
-                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
+                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)]  text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
                             value={newItemItinerary.img}
                             onChange={e => setNewItemItinerary({ ...newItemItinerary, img: e.target.value })}
                         />
@@ -1241,7 +1340,7 @@ const TripDashboard = () => {
                         <input
                             type="text"
                             placeholder="https://..."
-                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
+                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)]  text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
                             value={newItemItinerary.mapEmbed}
                             onChange={e => setNewItemItinerary({ ...newItemItinerary, mapEmbed: e.target.value })}
                         />
@@ -1252,23 +1351,23 @@ const TripDashboard = () => {
                 <Modal isOpen={activeModal === 'transport'} onClose={() => setActiveModal(null)} title="Spostamento">
                     <InputGroup label="Mezzo">
                         <div className="flex gap-2">
-                            <input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemTransport.dettaglio} onChange={e => setNewItemTransport({ ...newItemTransport, dettaglio: e.target.value })} placeholder="Es. Volo AZ203, Treno..." />
-                            <button onClick={() => fetchFlightDetails(newItemTransport.dettaglio)} className="bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] rounded-xl px-3 font-bold flex items-center justify-center shadow-sm active:scale-95 transition-all" title="Traccia Volo (Amadeus)">
+                            <input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)]  text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemTransport.dettaglio} onChange={e => setNewItemTransport({ ...newItemTransport, dettaglio: e.target.value })} placeholder="Es. Volo AZ203, Treno..." />
+                            <button onClick={() => fetchFlightDetails(newItemTransport.dettaglio)} className="bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] rounded-xl px-3 font-bold flex items-center justify-center shadow-sm" title="Traccia Volo (Amadeus)">
                                 <Plane size={20} />
                             </button>
                         </div>
                     </InputGroup>
-                    <div className="grid grid-cols-2 gap-3"><InputGroup label="Partenza"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemTransport.partenza} onChange={e => setNewItemTransport({ ...newItemTransport, partenza: e.target.value })} /></InputGroup><InputGroup label="Arrivo"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemTransport.arrivo} onChange={e => setNewItemTransport({ ...newItemTransport, arrivo: e.target.value })} /></InputGroup></div>
-                    <div className="grid grid-cols-2 gap-3"><InputGroup label="Data"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemTransport.data} onChange={e => setNewItemTransport({ ...newItemTransport, data: e.target.value })} /></InputGroup><InputGroup label="Ora"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemTransport.ora} onChange={e => setNewItemTransport({ ...newItemTransport, ora: e.target.value })} /></InputGroup></div>
+                    <div className="grid grid-cols-2 gap-3"><InputGroup label="Partenza"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)]  text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemTransport.partenza} onChange={e => setNewItemTransport({ ...newItemTransport, partenza: e.target.value })} /></InputGroup><InputGroup label="Arrivo"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)]  text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemTransport.arrivo} onChange={e => setNewItemTransport({ ...newItemTransport, arrivo: e.target.value })} /></InputGroup></div>
+                    <div className="grid grid-cols-2 gap-3"><InputGroup label="Data"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)]  text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemTransport.data} onChange={e => setNewItemTransport({ ...newItemTransport, data: e.target.value })} /></InputGroup><InputGroup label="Ora"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)]  text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemTransport.ora} onChange={e => setNewItemTransport({ ...newItemTransport, ora: e.target.value })} /></InputGroup></div>
                     <div className="grid grid-cols-2 gap-3 mb-3">
                         <InputGroup label="Terminal">
-                            <input type="text" placeholder="T1" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-sm text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemTransport.terminal || ""} onChange={e => setNewItemTransport({ ...newItemTransport, terminal: e.target.value })} />
+                            <input type="text" placeholder="T1" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)]  text-sm text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemTransport.terminal || ""} onChange={e => setNewItemTransport({ ...newItemTransport, terminal: e.target.value })} />
                         </InputGroup>
                         <InputGroup label="Gate">
-                            <input type="text" placeholder="A10" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-sm text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemTransport.gate || ""} onChange={e => setNewItemTransport({ ...newItemTransport, gate: e.target.value })} />
+                            <input type="text" placeholder="A10" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)]  text-sm text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemTransport.gate || ""} onChange={e => setNewItemTransport({ ...newItemTransport, gate: e.target.value })} />
                         </InputGroup>
                     </div>
-                    <InputGroup label="Costo"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemTransport.costo} onChange={e => setNewItemTransport({ ...newItemTransport, costo: e.target.value })} /></InputGroup>
+                    <InputGroup label="Costo"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)]  text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemTransport.costo} onChange={e => setNewItemTransport({ ...newItemTransport, costo: e.target.value })} /></InputGroup>
 
                     <div className="mt-4 p-4 rounded-xl bg-[var(--md-sys-color-surface-container-high)] border border-[var(--md-sys-color-outline-variant)]">
                         <div className="flex justify-between items-center mb-2">
@@ -1288,27 +1387,25 @@ const TripDashboard = () => {
                                     </div>
                                 )}
                                 <div className="flex-1 text-xs text-gray-500 font-medium">Biglietto Caricato</div>
-                                <button onClick={() => setNewItemTransport({ ...newItemTransport, ticket: "" })} className="p-3 bg-red-100 text-red-700 rounded-lg hover:bg-red-200">
-                                    <Trash size={18} />
+                                <button onClick={() => setNewItemTransport({ ...newItemTransport, ticket: "" })} className="p-3 bg-red-100 text-red-700 rounded-lg">                                    <Trash size={18} />
                                 </button>
                             </div>
                         ) : (
-                            <button onClick={() => setIsScanning(true)} className="w-full py-3 bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] rounded-lg font-bold flex items-center justify-center gap-2 hover:shadow-md transition-all">
-                                <Image size={20} />
+                            <button onClick={() => setIsScanning(true)} className="w-full py-3 bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] rounded-lg font-bold flex items-center justify-center gap-2">                                <Image size={20} />
                                 Carica Immagine Biglietto
                             </button>
                         )}
                     </div>
 
                     <Button onClick={handleAddTransport} className="mt-4">Salva</Button>
-                </Modal>
+                </Modal >
                 <Modal isOpen={activeModal === 'expenses'} onClose={() => { setActiveModal(null); setEditingId(null); }} title={editingId ? "Modifica Spesa" : "Nuova Spesa"}>
                     <InputGroup label="Oggetto">
                         <div className="flex gap-2">
                             <input
                                 type="text"
                                 placeholder="Es. Cena"
-                                className="flex-1 p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)] min-w-0"
+                                className="flex-1 p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)]  text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)] min-w-0"
                                 value={newItemExpense.item}
                                 onChange={e => setNewItemExpense({ ...newItemExpense, item: e.target.value })}
                             />
@@ -1316,14 +1413,12 @@ const TripDashboard = () => {
                             <button
                                 onClick={() => setShowCamera(true)}
                                 disabled={isAnalyzingReceipt}
-                                className={`flex items-center justify-center w-12 rounded-xl border border-[var(--md-sys-color-outline-variant)] transition-all ${isAnalyzingReceipt ? 'bg-amber-100 text-amber-600 animate-pulse' : 'bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] hover:bg-[var(--md-sys-color-secondary-container)] hover:text-[var(--md-sys-color-on-secondary-container)]'}`}
-                                title="Scatta Foto"
+                                className={`flex items-center justify-center w-12 rounded-xl border border-[var(--md-sys-color-outline-variant)]  ${isAnalyzingReceipt ? 'bg-amber-100 text-amber-600 animate-pulse' : 'bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)]'}`} title="Scatta Foto"
                             >
                                 {isAnalyzingReceipt ? <RefreshCw size={20} className="animate-spin" /> : <Camera size={20} />}
                             </button>
                             {/* Upload Button */}
-                            <label className={`flex items-center justify-center w-12 rounded-xl border border-[var(--md-sys-color-outline-variant)] cursor-pointer transition-all ${isAnalyzingReceipt ? 'opacity-50 pointer-events-none' : 'bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)] hover:bg-[var(--md-sys-color-secondary-container)] hover:text-[var(--md-sys-color-on-secondary-container)]'}`} title="Carica da Galleria">
-                                <Image size={20} />
+                            <label className={`flex items-center justify-center w-12 rounded-xl border border-[var(--md-sys-color-outline-variant)] cursor-pointer  ${isAnalyzingReceipt ? 'opacity-50 pointer-events-none' : 'bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface)]'}`} title="Carica da Galleria">                                <Image size={20} />
                                 <input type="file" accept="image/*" className="hidden" onChange={(e) => processReceiptFile(e.target.files[0])} disabled={isAnalyzingReceipt} />
                             </label>
                         </div>
@@ -1331,7 +1426,7 @@ const TripDashboard = () => {
                     <InputGroup label="Data">
                         <input
                             type="date"
-                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)]"
+                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)]  text-[var(--md-sys-color-on-surface)]"
                             value={newItemExpense.data || new Date().toISOString().split('T')[0]}
                             onChange={e => setNewItemExpense({ ...newItemExpense, data: e.target.value })}
                         />
@@ -1341,14 +1436,14 @@ const TripDashboard = () => {
                             <input
                                 type="number"
                                 placeholder="0.00"
-                                className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all font-bold text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
+                                className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)]  font-bold text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
                                 value={newItemExpense.costo}
                                 onChange={e => setNewItemExpense({ ...newItemExpense, costo: e.target.value })}
                             />
                         </InputGroup>
                         <InputGroup label="Valuta">
                             <select
-                                className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all appearance-none text-sm font-medium text-[var(--md-sys-color-on-surface)]"
+                                className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)]  appearance-none text-sm font-medium text-[var(--md-sys-color-on-surface)]"
                                 value={newItemExpense.valuta}
                                 onChange={e => setNewItemExpense({ ...newItemExpense, valuta: e.target.value })}
                             >
@@ -1359,16 +1454,16 @@ const TripDashboard = () => {
                     </div>
 
                     <div className="grid grid-cols-2 gap-3 mb-4">
-                        <label className={`flex items-center gap-3 p-4 border-0 rounded-xl cursor-pointer transition-all select-none ${newItemExpense.prenotato ? 'bg-[var(--md-sys-color-secondary-container)]' : 'bg-[var(--md-sys-color-surface-container-highest)]'}`}>
-                            <div className={`w-5 h-5 rounded border-0 flex items-center justify-center transition-colors ${newItemExpense.prenotato ? 'bg-[var(--md-sys-color-on-secondary-container)]' : 'bg-[var(--md-sys-color-surface-variant)]'}`}>
+                        <label className={`flex items-center gap-3 p-4 border-0 rounded-xl cursor-pointer  select-none ${newItemExpense.prenotato ? 'bg-[var(--md-sys-color-secondary-container)]' : 'bg-[var(--md-sys-color-surface-container-highest)]'}`}>
+                            <div className={`w-5 h-5 rounded border-0 flex items-center justify-center  ${newItemExpense.prenotato ? 'bg-[var(--md-sys-color-on-secondary-container)]' : 'bg-[var(--md-sys-color-surface-variant)]'}`}>
                                 {newItemExpense.prenotato && <Check size={12} className="text-[var(--md-sys-color-secondary-container)]" />}
                             </div>
                             <span className={`text-sm font-bold ${newItemExpense.prenotato ? 'text-[var(--md-sys-color-on-secondary-container)]' : 'text-[var(--md-sys-color-on-surface-variant)]'}`}>Già Prenotato</span>
                             <input type="checkbox" className="hidden" checked={newItemExpense.prenotato} onChange={() => setNewItemExpense({ ...newItemExpense, prenotato: !newItemExpense.prenotato })} />
                         </label>
 
-                        <label className={`flex items-center gap-3 p-4 border-0 rounded-xl cursor-pointer transition-all select-none ${newItemExpense.pagato ? 'bg-[var(--md-sys-color-tertiary-container)]' : 'bg-[var(--md-sys-color-surface-container-highest)]'}`}>
-                            <div className={`w-5 h-5 rounded border-0 flex items-center justify-center transition-colors ${newItemExpense.pagato ? 'bg-[var(--md-sys-color-on-tertiary-container)]' : 'bg-[var(--md-sys-color-surface-variant)]'}`}>
+                        <label className={`flex items-center gap-3 p-4 border-0 rounded-xl cursor-pointer  select-none ${newItemExpense.pagato ? 'bg-[var(--md-sys-color-tertiary-container)]' : 'bg-[var(--md-sys-color-surface-container-highest)]'}`}>
+                            <div className={`w-5 h-5 rounded border-0 flex items-center justify-center  ${newItemExpense.pagato ? 'bg-[var(--md-sys-color-on-tertiary-container)]' : 'bg-[var(--md-sys-color-surface-variant)]'}`}>
                                 {newItemExpense.pagato && <Check size={12} className="text-[var(--md-sys-color-tertiary-container)]" />}
                             </div>
                             <span className={`text-sm font-bold ${newItemExpense.pagato ? 'text-[var(--md-sys-color-on-tertiary-container)]' : 'text-[var(--md-sys-color-on-surface-variant)]'}`}>Già Pagato</span>
@@ -1378,7 +1473,7 @@ const TripDashboard = () => {
 
                     <InputGroup label="Chi Ha Pagato">
                         <select
-                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all appearance-none text-[var(--md-sys-color-on-surface)]"
+                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)]  appearance-none text-[var(--md-sys-color-on-surface)]"
                             value={newItemExpense.chi}
                             onChange={e => setNewItemExpense({ ...newItemExpense, chi: e.target.value })}
                         >
@@ -1399,108 +1494,105 @@ const TripDashboard = () => {
                         <input
                             type="text"
                             placeholder="Es. Da dividere"
-                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
+                            className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)]  text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
                             value={newItemExpense.note || ""}
                             onChange={e => setNewItemExpense({ ...newItemExpense, note: e.target.value })}
                         />
                     </InputGroup>
 
-                    <Button onClick={handleAddExpense} className="mt-4 !bg-[#B3261E] !text-white shadow-md hover:!bg-[#8C1D18]">Salva Spesa</Button>
+                    <Button onClick={handleAddExpense} className="mt-4 !bg-[#B3261E] !text-white shadow-md">Spesa</Button>
                 </Modal>
                 <Modal isOpen={activeModal === 'day'} onClose={() => setActiveModal(null)} title="Nuova Giornata">
-                    <InputGroup label="Data"><input type="date" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemDay.data} onChange={e => setNewItemDay({ ...newItemDay, data: e.target.value })} /></InputGroup>
+                    < InputGroup label="Data" > <input type="date" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)]  text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemDay.data} onChange={e => setNewItemDay({ ...newItemDay, data: e.target.value })} /></InputGroup >
                     <Button onClick={handleAddDay} className="mt-4">Salva</Button>
-                </Modal>
+                </Modal >
                 <Modal isOpen={activeModal === 'event'} onClose={() => { setActiveModal(null); setEditingId(null); }} title="Aggiungi Evento">
                     <div className="flex p-1 bg-[var(--md-sys-color-surface-container-high)] rounded-full border border-[var(--md-sys-color-outline-variant)] mb-4 w-full">
                         <button
                             onClick={() => setNewItemEvent({ ...newItemEvent, type: 'attraction' })}
-                            className={`flex-1 py-2 rounded-full text-sm font-bold transition-all ${newItemEvent.type !== 'custom' ? 'bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] shadow-sm' : 'text-[var(--md-sys-color-on-surface-variant)] hover:bg-[var(--md-sys-color-surface-container-highest)]'}`}
-                        >
+                            className={`flex-1 py-2 rounded-full text-sm font-bold  ${newItemEvent.type !== 'custom' ? 'bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] shadow-sm' : 'text-[var(--md-sys-color-on-surface-variant)]'}`}                    >
                             Attrazione
                         </button>
                         <button
                             onClick={() => setNewItemEvent({ ...newItemEvent, type: 'custom' })}
-                            className={`flex-1 py-2 rounded-full text-sm font-bold transition-all ${newItemEvent.type === 'custom' ? 'bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] shadow-sm' : 'text-[var(--md-sys-color-on-surface-variant)] hover:bg-[var(--md-sys-color-surface-container-highest)]'}`}
-                        >
+                            className={`flex-1 py-2 rounded-full text-sm font-bold  ${newItemEvent.type === 'custom' ? 'bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] shadow-sm' : 'text-[var(--md-sys-color-on-surface-variant)]'}`}                >
                             Altro / Note
                         </button>
-                    </div>
+                    </div >
 
-                    {newItemEvent.type === 'custom' ? (
-                        <div className="space-y-4">
-                            <InputGroup label="Titolo Evento">
-                                <input
-                                    type="text"
-                                    placeholder="Es. Pranzo, Shopping, Relax..."
-                                    className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
-                                    value={newItemEvent.customTitle}
-                                    onChange={e => setNewItemEvent({ ...newItemEvent, customTitle: e.target.value })}
-                                />
-                            </InputGroup>
-                        </div>
-                    ) : (
-                        <div className="space-y-3">
-                            <div className="relative">
-                                <Search className="absolute left-3 top-3.5 text-[var(--md-sys-color-on-surface-variant)]" size={18} />
-                                <input
-                                    type="text"
-                                    placeholder="Cerca attrazione..."
-                                    className="w-full pl-10 pr-4 py-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-sm text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
-                                    value={eventSearch}
-                                    onChange={(e) => setEventSearch(e.target.value)}
-                                />
+                    {
+                        newItemEvent.type === 'custom' ? (
+                            <div className="space-y-4">
+                                <InputGroup label="Titolo Evento">
+                                    <input
+                                        type="text"
+                                        placeholder="Es. Pranzo, Shopping, Relax..."
+                                        className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)]  text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
+                                        value={newItemEvent.customTitle}
+                                        onChange={e => setNewItemEvent({ ...newItemEvent, customTitle: e.target.value })}
+                                    />
+                                </InputGroup>
                             </div>
+                        ) : (
+                            <div className="space-y-3">
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-3.5 text-[var(--md-sys-color-on-surface-variant)]" size={18} />
+                                    <input
+                                        type="text"
+                                        placeholder="Cerca attrazione..."
+                                        className="w-full pl-10 pr-4 py-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)]  text-sm text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
+                                        value={eventSearch}
+                                        onChange={(e) => setEventSearch(e.target.value)}
+                                    />
+                                </div>
 
-                            <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1 scroller">
-                                {itinerary
-                                    .filter(i => i.nome.toLowerCase().includes(eventSearch.toLowerCase()))
-                                    .map(item => {
-                                        const isSelected = newItemEvent.attractionId === item.id;
-                                        return (
-                                            <div
-                                                key={item.id}
-                                                onClick={() => setNewItemEvent({ ...newItemEvent, attractionId: item.id })}
-                                                className={`flex items-center gap-3 p-3 rounded-2xl border-0 cursor-pointer transition-all group ${isSelected ? 'bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] ring-2 ring-[var(--md-sys-color-primary)]' : 'bg-[var(--md-sys-color-surface-container-low)] text-[var(--md-sys-color-on-surface)] hover:bg-[var(--md-sys-color-surface-container)]'
-                                                    }`}
-                                            >
-                                                <div className="w-12 h-12 rounded-xl bg-[var(--md-sys-color-surface-container-highest)] overflow-hidden shrink-0">
-                                                    {item.img ? (
-                                                        <img src={item.img} alt={item.nome} className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        <div className="w-full h-full flex items-center justify-center text-[var(--md-sys-color-on-surface-variant)]">
-                                                            <MapPin size={20} />
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <h4 className={`font-bold text-sm truncate ${isSelected ? 'text-[var(--md-sys-color-on-secondary-container)]' : 'text-[var(--md-sys-color-on-surface)]'}`}>{item.nome}</h4>
-                                                    <div className="flex items-center gap-2 mt-0.5">
-                                                        <Badge type={item.categoria}>{item.categoria}</Badge>
-                                                        <span className={`text-xs ${isSelected ? 'text-[var(--md-sys-color-on-secondary-container)] opacity-80' : 'text-[var(--md-sys-color-on-surface-variant)]'}`}>{item.durata}</span>
+                                <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1 scroller">
+                                    {itinerary
+                                        .filter(i => i.nome.toLowerCase().includes(eventSearch.toLowerCase()))
+                                        .map(item => {
+                                            const isSelected = newItemEvent.attractionId === item.id;
+                                            return (
+                                                <div
+                                                    key={item.id}
+                                                    onClick={() => setNewItemEvent({ ...newItemEvent, attractionId: item.id })}
+                                                    className={`flex items-center gap-3 p-3 rounded-2xl border-0 cursor-pointer  group ${isSelected ? 'bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] ring-2 ring-[var(--md-sys-color-primary)]' : 'bg-[var(--md-sys-color-surface-container-low)] text-[var(--md-sys-color-on-surface)]'}`}
+                                                >
+                                                    <div className="w-12 h-12 rounded-xl bg-[var(--md-sys-color-surface-container-highest)] overflow-hidden shrink-0">
+                                                        {item.img ? (
+                                                            <img src={item.img} alt={item.nome} className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <div className="w-full h-full flex items-center justify-center text-[var(--md-sys-color-on-surface-variant)]">
+                                                                <MapPin size={20} />
+                                                            </div>
+                                                        )}
                                                     </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <h4 className={`font-bold text-sm truncate ${isSelected ? 'text-[var(--md-sys-color-on-secondary-container)]' : 'text-[var(--md-sys-color-on-surface)]'}`}>{item.nome}</h4>
+                                                        <div className="flex items-center gap-2 mt-0.5">
+                                                            <Badge type={item.categoria}>{item.categoria}</Badge>
+                                                            <span className={`text-xs ${isSelected ? 'text-[var(--md-sys-color-on-secondary-container)] opacity-80' : 'text-[var(--md-sys-color-on-surface-variant)]'}`}>{item.durata}</span>
+                                                        </div>
+                                                    </div>
+                                                    <button className={`w-10 h-10 rounded-full flex items-center justify-center  ${isSelected ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)]' : 'bg-[var(--md-sys-color-surface-container-highest)] text-[var(--md-sys-color-primary)]'}`}>                                                    {isSelected ? <Check size={20} /> : <Plus size={20} />}
+                                                    </button>
                                                 </div>
-                                                <button className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${isSelected ? 'bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)]' : 'bg-[var(--md-sys-color-surface-container-highest)] text-[var(--md-sys-color-primary)] group-hover:bg-[var(--md-sys-color-primary-container)]'}`}>
-                                                    {isSelected ? <Check size={20} /> : <Plus size={20} />}
-                                                </button>
-                                            </div>
-                                        );
-                                    })}
-                                {itinerary.filter(i => i.nome.toLowerCase().includes(eventSearch.toLowerCase())).length === 0 && (
-                                    <div className="text-center py-8 text-gray-400 text-sm">
-                                        Nessuna attrazione trovata
-                                    </div>
-                                )}
+                                            );
+                                        })}
+                                    {itinerary.filter(i => i.nome.toLowerCase().includes(eventSearch.toLowerCase())).length === 0 && (
+                                        <div className="text-center py-8 text-gray-400 text-sm">
+                                            Nessuna attrazione trovata
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        )}
 
                     <div className="mt-4 pt-4 border-t border-[var(--md-sys-color-outline-variant)] space-y-4">
                         <InputGroup label="Orario Inizio">
                             <div className="relative">
                                 <input
                                     type="time"
-                                    className="w-full p-4 pl-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all font-bold text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
+                                    className="w-full p-4 pl-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)]  font-bold text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
                                     value={newItemEvent.time}
                                     onChange={e => setNewItemEvent({ ...newItemEvent, time: e.target.value })}
                                 />
@@ -1512,7 +1604,7 @@ const TripDashboard = () => {
                             <input
                                 type="text"
                                 placeholder="Es. Ingresso prenotato, dettagli..."
-                                className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-sm text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
+                                className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)]  text-sm text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]"
                                 value={newItemEvent.notes}
                                 onChange={e => setNewItemEvent({ ...newItemEvent, notes: e.target.value })}
                             />
@@ -1522,10 +1614,10 @@ const TripDashboard = () => {
                     <Button onClick={handleAddEvent} className="mt-4" disabled={!newItemEvent.time || (newItemEvent.type !== 'custom' && !newItemEvent.attractionId)}>
                         {editingId && editingId.startsWith('evt_') ? "Salva Modifiche" : "Aggiungi Evento"}
                     </Button>
-                </Modal>
+                </Modal >
                 <Modal isOpen={activeModal === 'tripDetails'} onClose={() => setActiveModal(null)} title="Dettagli Viaggio">
-                    <InputGroup label="Titolo"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemTripDetails.title} onChange={e => setNewItemTripDetails({ ...newItemTripDetails, title: e.target.value })} /></InputGroup>
-                    <div className="grid grid-cols-2 gap-3"><InputGroup label="Date"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemTripDetails.dates} onChange={e => setNewItemTripDetails({ ...newItemTripDetails, dates: e.target.value })} /></InputGroup><InputGroup label="Flag"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemTripDetails.flag} onChange={e => setNewItemTripDetails({ ...newItemTripDetails, flag: e.target.value })} /></InputGroup></div>
+                    <InputGroup label="Titolo"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)]  text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemTripDetails.title} onChange={e => setNewItemTripDetails({ ...newItemTripDetails, title: e.target.value })} /></InputGroup>
+                    <div className="grid grid-cols-2 gap-3"><InputGroup label="Date"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)]  text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemTripDetails.dates} onChange={e => setNewItemTripDetails({ ...newItemTripDetails, dates: e.target.value })} /></InputGroup><InputGroup label="Flag"><input type="text" className="w-full p-4 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)]  text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]" value={newItemTripDetails.flag} onChange={e => setNewItemTripDetails({ ...newItemTripDetails, flag: e.target.value })} /></InputGroup></div>
                     <div className="flex flex-wrap gap-2 mt-2">{colors.map(c => <button key={c.hex} onClick={() => setNewItemTripDetails({ ...newItemTripDetails, color: c.hex })} className="w-8 h-8 rounded-full border-2" style={{ backgroundColor: c.hex, borderColor: newItemTripDetails.color === c.hex ? 'black' : 'transparent' }}></button>)}</div>
 
                     <div className="mt-4 pt-4 border-t border-[var(--md-sys-color-outline-variant)]">
@@ -1534,7 +1626,7 @@ const TripDashboard = () => {
                             <input
                                 type="text"
                                 placeholder="Nuovo partecipante..."
-                                className="flex-1 p-3 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] transition-all text-sm text-[var(--md-sys-color-on-surface)]"
+                                className="flex-1 p-3 bg-[var(--md-sys-color-surface-container-highest)] border border-[var(--md-sys-color-outline-variant)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)]  text-sm text-[var(--md-sys-color-on-surface)]"
                                 value={newParticipantName}
                                 onChange={(e) => setNewParticipantName(e.target.value)}
                                 onKeyDown={(e) => {
@@ -1557,8 +1649,7 @@ const TripDashboard = () => {
                                         }
                                     }
                                 }}
-                                className="w-12 h-12 rounded-xl bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] flex items-center justify-center font-bold hover:shadow-md transition-all active:scale-95"
-                            >
+                                className="w-12 h-12 rounded-xl bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] flex items-center justify-center font-bold"                            >
                                 <Plus size={20} />
                             </button>
                         </div>
@@ -1576,8 +1667,7 @@ const TripDashboard = () => {
                                             const currentParticipants = newItemTripDetails.participants || ["Andrea Inardi", "Elena Cafasso"];
                                             setNewItemTripDetails({ ...newItemTripDetails, participants: currentParticipants.filter(name => name !== p) });
                                         }}
-                                        className="w-8 h-8 rounded-full bg-[#FFDAD6] text-[#410002] flex items-center justify-center hover:shadow-md transition-all active:scale-90"
-                                    >
+                                        className="w-8 h-8 rounded-full bg-[#FFDAD6] text-[#410002] flex items-center justify-center"                                    >
                                         <Trash size={14} />
                                     </button>
                                 </div>
@@ -1742,8 +1832,7 @@ const TripDashboard = () => {
 
                                                 <button
                                                     onClick={() => handleSettleDebt(debt)}
-                                                    className="w-full py-3 bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] rounded-xl font-bold flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all"
-                                                >
+                                                    className="w-full py-3 bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] rounded-xl font-bold flex items-center justify-center gap-2 shadow-md"                                                >
                                                     <Check size={20} /> Salda Debito
                                                 </button>
                                             </div>
@@ -1857,10 +1946,29 @@ const TripDashboard = () => {
                 isScanning && (
                     <div className="fixed inset-0 z-[1000] content-center">
                         <TicketScanner
-                            onScan={(data) => {
+                            onScan={async (data) => {
+                                // 1. Save Image Immediately
                                 setNewItemTransport(prev => ({ ...prev, ticket: data }));
                                 setIsScanning(false);
-                                // Optional: Show success toast
+
+                                // 2. Trigger Gemini Analysis
+                                if (window.GeminiService && window.GeminiService.scanTicket) {
+                                    const result = await window.GeminiService.scanTicket(data);
+
+                                    if (result) {
+                                        setNewItemTransport(prev => ({
+                                            ...prev,
+                                            ticket: data,
+                                            dettaglio: result.carrier && result.flightNumber ? `Volo ${result.carrier} ${result.flightNumber}` : prev.dettaglio,
+                                            partenza: result.origin || prev.partenza,
+                                            arrivo: result.destination || prev.arrivo,
+                                            data: result.date ? result.date.split('-').reverse().join('/') : prev.data,
+                                            ora: result.departureTime || prev.ora,
+                                            terminal: result.terminal || prev.terminal,
+                                            gate: result.gate || prev.gate
+                                        }));
+                                    }
+                                }
                             }}
                             onClose={() => setIsScanning(false)}
                         />
@@ -1880,17 +1988,20 @@ const TripDashboard = () => {
                 )
             }
 
-            {showCamera && (
-                <CameraCapture
-                    onCapture={(file) => {
-                        setShowCamera(false);
-                        processReceiptFile(file);
-                    }}
-                    onClose={() => setShowCamera(false)}
-                />
-            )}
+            {
+                showCamera && (
+                    <CameraCapture
+                        onCapture={(file) => {
+                            setShowCamera(false);
+                            processReceiptFile(file);
+                        }}
+                        onClose={() => setShowCamera(false)}
+                    />
+                )
+            }
         </>
     );
 };
 
 window.TripDashboard = TripDashboard;
+

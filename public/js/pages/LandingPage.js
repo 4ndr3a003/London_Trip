@@ -187,7 +187,7 @@ const LandingPage = () => {
                                     </button>
                                 </div>
 
-                                <h3 className="headline-medium font-bold text-[var(--md-sys-color-on-surface)] mb-1 leading-tight">
+                                <h3 className="text-4xl font-bold text-[var(--md-sys-color-on-surface)] mb-2 leading-tight">
                                     {trip.title}
                                 </h3>
                                 <div className="flex items-center gap-2 text-[var(--md-sys-color-on-surface-variant)]">
