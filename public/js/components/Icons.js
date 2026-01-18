@@ -94,3 +94,19 @@ window.Plane = Plane;
 
 const UploadCloud = (props) => (<IconBase {...props}><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242" /><path d="M12 12v9" /><path d="m16 16-4-4-4 4" /></IconBase>);
 window.UploadCloud = UploadCloud;
+
+const Cloud = (props) => (<IconBase {...props}><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" /></IconBase>);
+const CloudRain = (props) => (<IconBase {...props}><line x1="16" x2="16" y1="13" y2="21" /><line x1="8" x2="8" y1="13" y2="21" /><line x1="12" x2="12" y1="15" y2="23" /><path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25" /></IconBase>);
+const CloudSnow = (props) => (<IconBase {...props}><path d="M20 17.58A5 5 0 0 0 18 8h-1.26A8 8 0 1 0 4 16.25" /><line x1="8" x2="8" y1="16" y2="16" /><line x1="8" x2="8" y1="20" y2="20" /><line x1="12" x2="12" y1="18" y2="18" /><line x1="12" x2="12" y1="22" y2="22" /><line x1="16" x2="16" y1="16" y2="16" /><line x1="16" x2="16" y1="20" y2="20" /></IconBase>);
+const Wind = (props) => (<IconBase {...props}><path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2" /><path d="M9.6 4.6A2 2 0 1 1 11 8H2" /><path d="M12.6 19.4A2 2 0 1 0 14 16H2" /></IconBase>);
+const ArrowRight = (props) => (<IconBase {...props}><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></IconBase>);
+const Navigation = (props) => (<IconBase {...props}><polygon points="3 11 22 2 13 21 11 13 3 11" /></IconBase>);
+const MoreVertical = (props) => (<IconBase {...props}><circle cx="12" cy="12" r="1" /><circle cx="12" cy="5" r="1" /><circle cx="12" cy="19" r="1" /></IconBase>);
+
+window.Cloud = Cloud;
+window.CloudRain = CloudRain;
+window.CloudSnow = CloudSnow;
+window.Wind = Wind;
+window.ArrowRight = ArrowRight;
+window.Navigation = Navigation;
+window.MoreVertical = MoreVertical;

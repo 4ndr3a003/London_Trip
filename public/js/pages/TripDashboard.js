@@ -10,7 +10,8 @@ const TripDashboard = () => {
         Edit, Trash, User, Smartphone, Search, Minus, Calendar, Clock, Check, ArrowDown,
         Backpack, FileText, LinkIcon, RefreshCw, Hourglass, Star,
         BackpackTab, DocumentsTab, ThemeToggle,
-        TicketScanner, TicketView, QrCode, Bus, Car, Plane, Ship, CameraCapture, Image
+        TicketScanner, TicketView, QrCode, Bus, Car, Plane, Ship, CameraCapture, Image,
+        JourneyTimeline // [NEW] Import Timeline Component
     } = window;
 
     const { tripId, tab } = useParams();
@@ -102,6 +103,7 @@ const TripDashboard = () => {
     const [sortOrder, setSortOrder] = useState("alpha");
     const [eventSearch, setEventSearch] = useState("");
     const [newParticipantName, setNewParticipantName] = useState("");
+    const [itineraryViewMode, setItineraryViewMode] = useState("list"); // 'list' or 'story'
 
     const [deferredPrompt, setDeferredPrompt] = useState(null);
 
@@ -1074,148 +1076,189 @@ const TripDashboard = () => {
                         {
                             activeTab === "itinerary" && (
                                 <div className="space-y-6">
-                                    <div className="flex justify-between items-center bg-[var(--md-sys-color-surface-container-low)] p-3 rounded-xl shadow-sm border border-[var(--md-sys-color-outline-variant)]"><h2 className="font-bold text-[var(--md-sys-color-on-surface)] flex gap-2"><Calendar size={20} className="text-[var(--md-sys-color-primary)]" /> Il tuo Viaggio</h2><button onClick={() => setActiveModal('day')} className="bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] px-3 py-1.5 rounded-full text-xs font-bold">+ Giornata</button></div>
-                                    {days.map(day => {
-                                        const dateObj = new Date(day.data);
-                                        const dayName = dateObj.toLocaleDateString('it-IT', { weekday: 'long' });
-                                        const dayNumber = dateObj.getDate();
-                                        const monthYear = dateObj.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+                                    {/* Header with Toggle */}
+                                    <div className="flex justify-between items-center bg-[var(--md-sys-color-surface-container-low)] p-3 rounded-xl shadow-sm border border-[var(--md-sys-color-outline-variant)]">
+                                        <h2 className="font-bold text-[var(--md-sys-color-on-surface)] flex gap-2"><Calendar size={20} className="text-[var(--md-sys-color-primary)]" /> Il tuo Viaggio</h2>
 
-                                        return (
-                                            <div key={day.id} className="relative pl-6 border-l-2 border-[var(--md-sys-color-outline-variant)] pb-8 last:border-l-transparent">
-                                                <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full border-4 border-[var(--md-sys-color-surface)] bg-[var(--md-sys-color-primary)] shadow-sm z-10"></div>
+                                        <div className="flex items-center gap-2">
+                                            {/* View Mode Toggle */}
+                                            <div className="bg-[var(--md-sys-color-surface-container-highest)] p-1 rounded-full flex gap-1">
+                                                <button
+                                                    onClick={() => setItineraryViewMode('list')}
+                                                    className={`p-2 rounded-full ${itineraryViewMode === 'list' ? 'bg-[var(--md-sys-color-white)] shadow-sm text-[var(--md-sys-color-primary)]' : 'text-[var(--md-sys-color-on-surface-variant)]'}`}
+                                                >
+                                                    <Calendar size={16} />
+                                                </button>
+                                                <button
+                                                    onClick={() => setItineraryViewMode('story')}
+                                                    className={`p-2 rounded-full ${itineraryViewMode === 'story' ? 'bg-[var(--md-sys-color-white)] shadow-sm text-[var(--md-sys-color-primary)]' : 'text-[var(--md-sys-color-on-surface-variant)]'}`}
+                                                >
+                                                    <Image size={16} /> {/* Using Image as proxy for visual/story view */}
+                                                </button>
+                                            </div>
 
-                                                <div className="bg-[var(--md-sys-color-surface-container-low)] rounded-[24px] shadow-sm overflow-hidden mb-2">
-                                                    <div className="p-5 flex justify-between items-start">
-                                                        <div>
-                                                            <div className="flex items-baseline gap-2 mb-1">
-                                                                <h3 className="text-xl font-bold text-[var(--md-sys-color-on-surface)] capitalize opacity-80">{dayName}</h3>
-                                                                <span className="text-4xl font-black text-[var(--md-sys-color-primary)] leading-none">{dayNumber}</span>
+                                            <button onClick={() => setActiveModal('day')} className="bg-[var(--md-sys-color-primary)] text-[var(--md-sys-color-on-primary)] px-3 py-1.5 rounded-full text-xs font-bold">+ Giornata</button>
+                                        </div>
+                                    </div>
+
+                                    {/* Content based on View Mode */}
+                                    {itineraryViewMode === 'story' ? (
+                                        <JourneyTimeline
+                                            days={days}
+                                            itinerary={itinerary}
+                                            transport={transport}
+                                            expenses={expenses}
+                                            weatherData={weatherData}
+                                            onEditEvent={(dayId, event) => { setEditingId(dayId); setNewItemEvent(event); setActiveModal('event'); }}
+                                            onAddEvent={(dayId) => { setEditingId(dayId); setActiveModal('event'); }}
+                                            onToggleVisit={toggleVisit}
+                                            onDeleteDay={handleDeleteDay}
+                                            onDeleteEvent={handleDeleteEvent}
+                                        />
+                                    ) : (
+                                        // LIST VIEW (Existing)
+                                        days.map(day => {
+                                            const dateObj = new Date(day.data);
+                                            const dayName = dateObj.toLocaleDateString('it-IT', { weekday: 'long' });
+                                            const dayNumber = dateObj.getDate();
+                                            const monthYear = dateObj.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+
+                                            return (
+                                                <div key={day.id} className="relative pl-6 border-l-2 border-[var(--md-sys-color-outline-variant)] pb-8 last:border-l-transparent">
+                                                    <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full border-4 border-[var(--md-sys-color-surface)] bg-[var(--md-sys-color-primary)] shadow-sm z-10"></div>
+
+                                                    <div className="bg-[var(--md-sys-color-surface-container-low)] rounded-[24px] shadow-sm overflow-hidden mb-2">
+                                                        <div className="p-5 flex justify-between items-start">
+                                                            <div>
+                                                                <div className="flex items-baseline gap-2 mb-1">
+                                                                    <h3 className="text-xl font-bold text-[var(--md-sys-color-on-surface)] capitalize opacity-80">{dayName}</h3>
+                                                                    <span className="text-4xl font-black text-[var(--md-sys-color-primary)] leading-none">{dayNumber}</span>
+                                                                </div>
+                                                                <div className="text-[10px] font-bold text-[var(--md-sys-color-on-surface-variant)] uppercase tracking-[0.2em]">{monthYear}</div>
                                                             </div>
-                                                            <div className="text-[10px] font-bold text-[var(--md-sys-color-on-surface-variant)] uppercase tracking-[0.2em]">{monthYear}</div>
-                                                        </div>
-                                                        <div className="flex flex-col gap-2 items-end">
-                                                            <button
-                                                                onClick={() => { setEditingId(day.id); setActiveModal('event'); }}
-                                                                className="h-10 px-4 rounded-[12px] bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] text-xs font-bold flex items-center gap-1.5"
-                                                            >
-                                                                <Plus size={16} /> Evento
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleDeleteDay(day.id)}
-                                                                className="w-10 h-10 rounded-[12px] bg-[#FFDAD6] text-[#410002] flex items-center justify-center"
-                                                            >
-                                                                <Trash size={18} />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="border-t border-[var(--md-sys-color-outline-variant)] pt-4">
-                                                        {(!day.events || day.events.length === 0) ? (
-                                                            <div className="p-8 text-center text-[var(--md-sys-color-on-surface-variant)] italic text-sm">
-                                                                Nessun evento pianificato per oggi
+                                                            <div className="flex flex-col gap-2 items-end">
+                                                                <button
+                                                                    onClick={() => { setEditingId(day.id); setActiveModal('event'); }}
+                                                                    className="h-10 px-4 rounded-[12px] bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] text-xs font-bold flex items-center gap-1.5"
+                                                                >
+                                                                    <Plus size={16} /> Evento
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleDeleteDay(day.id)}
+                                                                    className="w-10 h-10 rounded-[12px] bg-[#FFDAD6] text-[#410002] flex items-center justify-center"
+                                                                >
+                                                                    <Trash size={18} />
+                                                                </button>
                                                             </div>
-                                                        ) : (
-                                                            <div className="space-y-0 pb-4">
-                                                                {day.events.map((ev, evIndex) => {
-                                                                    const attraction = ev.type === 'attraction' ? itinerary.find(i => i.id === ev.attractionId) : null;
-                                                                    const isLast = evIndex === day.events.length - 1;
+                                                        </div>
 
-                                                                    return (
-                                                                        <div
-                                                                            key={ev.id}
-                                                                            onClick={() => { setEditingId(day.id); setNewItemEvent(ev); setActiveModal('event'); }}
-                                                                            className="relative pl-4 pb-6 last:pb-0 group"
-                                                                        >
-                                                                            {/* Timeline Line */}
-                                                                            {!isLast && (
-                                                                                <div className="absolute left-[27px] top-[40px] bottom-[-10px] w-0.5 bg-[var(--md-sys-color-outline-variant)] opacity-50 z-0"></div>
-                                                                            )}
+                                                        <div className="border-t border-[var(--md-sys-color-outline-variant)] pt-4">
+                                                            {(!day.events || day.events.length === 0) ? (
+                                                                <div className="p-8 text-center text-[var(--md-sys-color-on-surface-variant)] italic text-sm">
+                                                                    Nessun evento pianificato per oggi
+                                                                </div>
+                                                            ) : (
+                                                                <div className="space-y-0 pb-4">
+                                                                    {day.events.map((ev, evIndex) => {
+                                                                        const attraction = ev.type === 'attraction' ? itinerary.find(i => i.id === ev.attractionId) : null;
+                                                                        const isLast = evIndex === day.events.length - 1;
 
-                                                                            <div className="flex gap-4 relative z-10">
-                                                                                {/* Time & Dot */}
-                                                                                <div className="flex flex-col items-center gap-2 pt-1 min-w-[50px]">
-                                                                                    <div className="text-sm font-bold text-[var(--md-sys-color-primary)] font-mono bg-[var(--md-sys-color-surface-container-low)] z-10 py-1">{ev.time}</div>
-                                                                                    <div className="w-3 h-3 rounded-full border-2 border-[var(--md-sys-color-primary)] bg-[var(--md-sys-color-surface-container-low)] z-10"></div>
-                                                                                </div>
+                                                                        return (
+                                                                            <div
+                                                                                key={ev.id}
+                                                                                onClick={() => { setEditingId(day.id); setNewItemEvent(ev); setActiveModal('event'); }}
+                                                                                className="relative pl-4 pb-6 last:pb-0 group"
+                                                                            >
+                                                                                {/* Timeline Line */}
+                                                                                {!isLast && (
+                                                                                    <div className="absolute left-[27px] top-[40px] bottom-[-10px] w-0.5 bg-[var(--md-sys-color-outline-variant)] opacity-50 z-0"></div>
+                                                                                )}
 
-                                                                                {/* Card Content */}
-                                                                                <div className="flex-1 bg-[var(--md-sys-color-surface-container-high)] rounded-[20px] p-3 shadow-sm border border-[var(--md-sys-color-outline-variant)]    cursor-pointer overflow-hidden flex gap-3">
-
-                                                                                    {/* Image Thumbnail */}
-                                                                                    <div className="w-20 h-20 rounded-[12px] bg-[var(--md-sys-color-surface-variant)] overflow-hidden shrink-0 relative">
-                                                                                        {attraction && attraction.img ? (
-                                                                                            <img src={attraction.img} alt={attraction.nome} className={`w-full h-full object-cover  ${attraction.visited ? 'grayscale opacity-60' : ''}`} />
-                                                                                        ) : (
-                                                                                            <div className={`w-full h-full flex items-center justify-center text-[var(--md-sys-color-on-surface-variant)] opacity-50 ${attraction?.visited ? 'grayscale opacity-60' : ''}`}>
-                                                                                                {ev.type === 'custom' ? <Star size={24} /> : <MapPin size={24} />}
-                                                                                            </div>
-                                                                                        )}
-                                                                                        {/* Category Overlay on Image (Small) */}
-                                                                                        {attraction && (
-                                                                                            <div className="absolute bottom-0 left-0 right-0 p-1 bg-black/40 backdrop-blur-[2px] flex justify-center">
-                                                                                                <span className="text-[8px] font-bold text-white uppercase tracking-wider truncate px-1">{attraction.categoria}</span>
-                                                                                            </div>
-                                                                                        )}
-                                                                                        {/* Visited Check Overlay */}
-                                                                                        {attraction && attraction.visited && (
-                                                                                            <div className="absolute inset-0 flex items-center justify-center bg-black/10 backdrop-blur-[1px]">
-                                                                                                <div className="bg-[#C4EED0] text-[#07210F] rounded-full p-1 shadow-sm">
-                                                                                                    <Check size={14} strokeWidth={4} />
-                                                                                                </div>
-                                                                                            </div>
-                                                                                        )}
+                                                                                <div className="flex gap-4 relative z-10">
+                                                                                    {/* Time & Dot */}
+                                                                                    <div className="flex flex-col items-center gap-2 pt-1 min-w-[50px]">
+                                                                                        <div className="text-sm font-bold text-[var(--md-sys-color-primary)] font-mono bg-[var(--md-sys-color-surface-container-low)] z-10 py-1">{ev.time}</div>
+                                                                                        <div className="w-3 h-3 rounded-full border-2 border-[var(--md-sys-color-primary)] bg-[var(--md-sys-color-surface-container-low)] z-10"></div>
                                                                                     </div>
 
-                                                                                    <div className="flex-1 min-w-0 py-1 flex flex-col justify-between">
-                                                                                        <div>
-                                                                                            <div className="flex justify-between items-start">
-                                                                                                <h4 className={`font-bold text-[15px] leading-tight line-clamp-2 ${ev.type === 'custom' ? 'text-[var(--md-sys-color-on-surface)]' : 'text-[var(--md-sys-color-primary)]'} ${attraction?.visited ? 'line-through opacity-60' : ''}`}>
-                                                                                                    {ev.type === 'custom' ? ev.customTitle : (attraction?.nome || 'Attrazione')}
-                                                                                                </h4>
-                                                                                                <div className="flex gap-1">
-                                                                                                    {attraction && (
-                                                                                                        <button
-                                                                                                            onClick={(e) => { e.stopPropagation(); toggleVisit(attraction.id, attraction.visited); }}
-                                                                                                            className={`w-8 h-8 flex items-center justify-center rounded-full  ${attraction.visited ? 'bg-[#C4EED0] text-[#07210F]' : 'bg-[var(--md-sys-color-surface-container-highest)] text-[var(--md-sys-color-on-surface-variant)]'}`} title={attraction.visited ? "Segna come non visitato" : "Segna come visitato"}
-                                                                                                        >
-                                                                                                            <Check size={16} strokeWidth={attraction.visited ? 3 : 2} />
-                                                                                                        </button>
-                                                                                                    )}
-                                                                                                    <button onClick={(e) => { e.stopPropagation(); handleDeleteEvent(day.id, ev.id); }} className="w-8 h-8 flex items-center justify-center text-[var(--md-sys-color-on-surface-variant)] rounded-full"><Trash size={16} /></button>
-                                                                                                </div>
-                                                                                            </div>
+                                                                                    {/* Card Content */}
+                                                                                    <div className="flex-1 bg-[var(--md-sys-color-surface-container-high)] rounded-[20px] p-3 shadow-sm border border-[var(--md-sys-color-outline-variant)]    cursor-pointer overflow-hidden flex gap-3">
 
-                                                                                            {/* Meta Info */}
-                                                                                            {attraction && attraction.quartiere && (
-                                                                                                <div className="flex items-center gap-1 text-xs text-[var(--md-sys-color-on-surface-variant)] mt-1 truncate">
-                                                                                                    <MapPin size={10} /> {attraction.quartiere}
+                                                                                        {/* Image Thumbnail */}
+                                                                                        <div className="w-20 h-20 rounded-[12px] bg-[var(--md-sys-color-surface-variant)] overflow-hidden shrink-0 relative">
+                                                                                            {attraction && attraction.img ? (
+                                                                                                <img src={attraction.img} alt={attraction.nome} className={`w-full h-full object-cover  ${attraction.visited ? 'grayscale opacity-60' : ''}`} />
+                                                                                            ) : (
+                                                                                                <div className={`w-full h-full flex items-center justify-center text-[var(--md-sys-color-on-surface-variant)] opacity-50 ${attraction?.visited ? 'grayscale opacity-60' : ''}`}>
+                                                                                                    {ev.type === 'custom' ? <Star size={24} /> : <MapPin size={24} />}
+                                                                                                </div>
+                                                                                            )}
+                                                                                            {/* Category Overlay on Image (Small) */}
+                                                                                            {attraction && (
+                                                                                                <div className="absolute bottom-0 left-0 right-0 p-1 bg-black/40 backdrop-blur-[2px] flex justify-center">
+                                                                                                    <span className="text-[8px] font-bold text-white uppercase tracking-wider truncate px-1">{attraction.categoria}</span>
+                                                                                                </div>
+                                                                                            )}
+                                                                                            {/* Visited Check Overlay */}
+                                                                                            {attraction && attraction.visited && (
+                                                                                                <div className="absolute inset-0 flex items-center justify-center bg-black/10 backdrop-blur-[1px]">
+                                                                                                    <div className="bg-[#C4EED0] text-[#07210F] rounded-full p-1 shadow-sm">
+                                                                                                        <Check size={14} strokeWidth={4} />
+                                                                                                    </div>
                                                                                                 </div>
                                                                                             )}
                                                                                         </div>
 
-                                                                                        {/* Badges & Notes */}
-                                                                                        <div className="flex flex-wrap gap-1.5 mt-2">
-                                                                                            {ev.type === 'custom' && (
-                                                                                                <span className="text-[10px] bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider">
-                                                                                                    {ev.customTitle ? 'Note' : 'Altro'}
-                                                                                                </span>
-                                                                                            )}
-                                                                                            {ev.notes && <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] flex items-center gap-1 bg-[var(--md-sys-color-surface-variant)]/30 px-2 py-0.5 rounded-md font-medium truncate max-w-full"><FileText size={10} /> {ev.notes}</span>}
+                                                                                        <div className="flex-1 min-w-0 py-1 flex flex-col justify-between">
+                                                                                            <div>
+                                                                                                <div className="flex justify-between items-start">
+                                                                                                    <h4 className={`font-bold text-[15px] leading-tight line-clamp-2 ${ev.type === 'custom' ? 'text-[var(--md-sys-color-on-surface)]' : 'text-[var(--md-sys-color-primary)]'} ${attraction?.visited ? 'line-through opacity-60' : ''}`}>
+                                                                                                        {ev.type === 'custom' ? ev.customTitle : (attraction?.nome || 'Attrazione')}
+                                                                                                    </h4>
+                                                                                                    <div className="flex gap-1">
+                                                                                                        {attraction && (
+                                                                                                            <button
+                                                                                                                onClick={(e) => { e.stopPropagation(); toggleVisit(attraction.id, attraction.visited); }}
+                                                                                                                className={`w-8 h-8 flex items-center justify-center rounded-full  ${attraction.visited ? 'bg-[#C4EED0] text-[#07210F]' : 'bg-[var(--md-sys-color-surface-container-highest)] text-[var(--md-sys-color-on-surface-variant)]'}`} title={attraction.visited ? "Segna come non visitato" : "Segna come visitato"}
+                                                                                                            >
+                                                                                                                <Check size={16} strokeWidth={attraction.visited ? 3 : 2} />
+                                                                                                            </button>
+                                                                                                        )}
+                                                                                                        <button onClick={(e) => { e.stopPropagation(); handleDeleteEvent(day.id, ev.id); }} className="w-8 h-8 flex items-center justify-center text-[var(--md-sys-color-on-surface-variant)] rounded-full"><Trash size={16} /></button>
+                                                                                                    </div>
+                                                                                                </div>
+
+                                                                                                {/* Meta Info */}
+                                                                                                {attraction && attraction.quartiere && (
+                                                                                                    <div className="flex items-center gap-1 text-xs text-[var(--md-sys-color-on-surface-variant)] mt-1 truncate">
+                                                                                                        <MapPin size={10} /> {attraction.quartiere}
+                                                                                                    </div>
+                                                                                                )}
+                                                                                            </div>
+
+                                                                                            {/* Badges & Notes */}
+                                                                                            <div className="flex flex-wrap gap-1.5 mt-2">
+                                                                                                {ev.type === 'custom' && (
+                                                                                                    <span className="text-[10px] bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider">
+                                                                                                        {ev.customTitle ? 'Note' : 'Altro'}
+                                                                                                    </span>
+                                                                                                )}
+                                                                                                {ev.notes && <span className="text-[10px] text-[var(--md-sys-color-on-surface-variant)] flex items-center gap-1 bg-[var(--md-sys-color-surface-variant)]/30 px-2 py-0.5 rounded-md font-medium truncate max-w-full"><FileText size={10} /> {ev.notes}</span>}
+                                                                                            </div>
                                                                                         </div>
                                                                                     </div>
                                                                                 </div>
                                                                             </div>
-                                                                        </div>
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                        )}
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        );
-                                    })}
+                                            );
+                                        })
+                                    )}
                                 </div>
                             )
                         }
