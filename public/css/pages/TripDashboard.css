@@ -512,9 +512,23 @@
     padding-bottom: env(safe-area-inset-bottom);
 }
 
+.expressive-nav::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: env(safe-area-inset-bottom);
+    background-color: var(--md-sys-color-surface-container-high);
+    z-index: 1;
+
+}
+
 .expressive-nav-inner {
     position: relative;
     height: 64px;
+    z-index: 2;
+
 }
 
 /* SVG Curved Notch Background */

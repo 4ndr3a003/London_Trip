@@ -45,6 +45,15 @@ const TripDashboard = () => {
     useEffect(() => {
         if (tripDetails.color) {
             applyTheme(tripDetails.color, themeMode);
+
+            // PWA Status Bar Override for Dashboard
+            // Dashboard header uses primaryContainer gradient, so we want the status bar to match that
+            if (window.currentThemeTokens && window.currentThemeTokens.primaryContainer) {
+                const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+                if (metaThemeColor) {
+                    metaThemeColor.setAttribute('content', window.currentThemeTokens.primaryContainer);
+                }
+            }
         }
         localStorage.setItem('themeMode', themeMode);
     }, [tripDetails.color, themeMode]);
@@ -701,7 +710,7 @@ const TripDashboard = () => {
             <div className={`dashboard-container ${isExiting ? 'page-exit' : 'page-enter'}`} style={{ background: `linear-gradient(180deg, var(--md-sys-color-primary-container) 0%, var(--md-sys-color-surface) 35%)` }}>
                 {/* Expressive Header - Balanced Layout */}
                 {/* Balanced Header - Weather Left */}
-                <header className="pt-6 pb-3 px-6">
+                <header className="pb-3 px-6" style={{ paddingTop: 'calc(4rem + env(safe-area-inset-top))' }}>
                     <div className="flex justify-between items-end">
                         {/* Left: Back/Theme + Weather */}
                         <div className="flex flex-col items-start gap-4">

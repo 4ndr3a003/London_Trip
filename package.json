@@ -4,15 +4,18 @@
   "description": "Collaborative trip planner for London",
   "scripts": {
     "start": "npx http-server public -o -c-1",
+    "build": "echo \"No build required for this project structure\"",
     "deploy": "firebase deploy"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
     "http-server": "^14.1.1"
   },
   "dependencies": {
     "@capacitor-mlkit/barcode-scanning": "^8.0.0",
     "@capacitor/android": "^8.0.0",
     "@capacitor/cli": "^8.0.0",
-    "@capacitor/core": "^8.0.0"
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/status-bar": "^8.0.0"
   }
 }

@@ -294,6 +294,17 @@ function applyTheme(seedColor, mode = 'light') {
     // Store seed color for reference
     root.style.setProperty('--md-sys-color-seed', seedColor);
 
+    // Expose tokens globally for usage in components
+    window.currentThemeTokens = tokens;
+
+    // Update PWA Theme Color (status bar)
+    // Default to surface color (navigation bar usually matches this or background)
+    // Pages can override this if they have a colored header (like TripDashboard)
+    const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+    if (metaThemeColor) {
+        metaThemeColor.setAttribute('content', tokens.surface);
+    }
+
     console.log(`[Theme] Applied M3 ${mode} theme with seed: ${seedColor}`);
 }
 

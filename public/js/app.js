@@ -43,6 +43,28 @@ const App = () => {
     const TripDashboard = window.TripDashboard;
     const [loading, setLoading] = React.useState(true);
 
+    // Initialize Status Bar for Immersive Mode
+    React.useEffect(() => {
+        const initStatusBar = async () => {
+            // Check if Capacitor is available by looking for the native bridge injection or plugin
+            if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.StatusBar) {
+                try {
+                    const { StatusBar, Style } = window.Capacitor.Plugins;
+                    await StatusBar.setOverlaysWebView({ overlay: true });
+                    // Use Dark style for light backgrounds (status bar icons will be black)
+                    // Or Light style for dark backgrounds (icons white)
+                    // Since our headers are usually colorful or light, we might want to be dynamic,
+                    // but for now let's try Style.Dark (black icons) or Transparent if supported.
+                    await StatusBar.setStyle({ style: Style.Dark });
+                    console.log("StatusBar configured for immersive mode");
+                } catch (err) {
+                    console.warn("StatusBar plugin error", err);
+                }
+            }
+        };
+        initStatusBar();
+    }, []);
+
     React.useEffect(() => {
         const checkComponents = () => {
             const lp = window.LandingPage;
