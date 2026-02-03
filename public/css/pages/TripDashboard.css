@@ -509,7 +509,7 @@
     left: 0;
     width: 100%;
     z-index: 50;
-    padding-bottom: env(safe-area-inset-bottom);
+    padding-bottom: calc(env(safe-area-inset-bottom) + 12px);
 }
 
 .expressive-nav::after {
@@ -518,7 +518,7 @@
     bottom: 0;
     left: 0;
     width: 100%;
-    height: env(safe-area-inset-bottom);
+    height: calc(env(safe-area-inset-bottom) + 12px);
     background-color: var(--md-sys-color-surface-container-high);
     z-index: 1;
 
@@ -911,6 +911,7 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
 }
+
 /* ======================================== */
 /* Google Places Autocomplete Customization */
 /* ======================================== */
@@ -938,7 +939,8 @@
     gap: 12px !important;
 }
 
-.pac-item:hover, .pac-item-selected {
+.pac-item:hover,
+.pac-item-selected {
     background-color: var(--md-sys-color-primary-container) !important;
     color: var(--md-sys-color-on-primary-container) !important;
 }
@@ -961,7 +963,8 @@
     font-weight: 600 !important;
 }
 
-.pac-item:hover .pac-item-query, .pac-item-selected .pac-item-query {
+.pac-item:hover .pac-item-query,
+.pac-item-selected .pac-item-query {
     color: var(--md-sys-color-on-primary-container) !important;
 }
 
@@ -971,14 +974,15 @@
     font-size: 0.85rem !important;
 }
 
-.pac-item:hover span, .pac-item-selected span {
-    color: var(--md-sys-color-on-primary-container) !important; 
+.pac-item:hover span,
+.pac-item-selected span {
+    color: var(--md-sys-color-on-primary-container) !important;
     opacity: 0.8;
 }
 
 /* Icons - Hide default map marker */
 .pac-icon {
-    display: none !important; 
+    display: none !important;
 }
 
 /* Custom Icon */
@@ -1002,4 +1006,3 @@
        No, CSS doesn't work that way. I'll stick to a neutral icon or rely on the filter.
     */
 }
-

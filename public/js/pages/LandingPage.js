@@ -138,7 +138,7 @@ const LandingPage = () => {
     return (
         <div className="landing-container bg-[var(--md-sys-color-surface)] min-h-screen pb-24">
             {/* Expressive Header */}
-            <header className="pb-8 px-6" style={{ paddingTop: 'calc(3rem + env(safe-area-inset-top))' }}>
+            <header className="pb-8 px-6" style={{ paddingTop: 'calc(0rem + env(safe-area-inset-top))' }}>
                 <div className="flex justify-between items-center mb-6">
                     <img src="img/icon-192.png" alt="App Icon" className="w-12 h-12 rounded-[16px] shadow-sm" />
                     <ThemeToggle mode={themeMode} onToggle={toggleTheme} />

@@ -710,7 +710,7 @@ const TripDashboard = () => {
             <div className={`dashboard-container ${isExiting ? 'page-exit' : 'page-enter'}`} style={{ background: `linear-gradient(180deg, var(--md-sys-color-primary-container) 0%, var(--md-sys-color-surface) 35%)` }}>
                 {/* Expressive Header - Balanced Layout */}
                 {/* Balanced Header - Weather Left */}
-                <header className="pb-3 px-6" style={{ paddingTop: 'calc(4rem + env(safe-area-inset-top))' }}>
+                <header className="pb-3 px-6" style={{ paddingTop: 'calc(0rem + env(safe-area-inset-top))' }}>
                     <div className="flex justify-between items-end">
                         {/* Left: Back/Theme + Weather */}
                         <div className="flex flex-col items-start gap-4">
